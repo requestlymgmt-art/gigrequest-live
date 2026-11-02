@@ -30,7 +30,7 @@ export default function Register() {
     setLoading(true);
     try {
       await signUp(email, password, bandName.trim(), slug.trim());
-      toast.success('Band profile created! Welcome to GigRequest!');
+      toast.success('Band profile created! Welcome to Requestly!');
       navigate('/dashboard');
     } catch (err) {
       console.error('Registration error:', err);
@@ -60,13 +60,13 @@ export default function Register() {
             width: '48px',
             height: '48px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
             marginBottom: '1rem',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.4)'
+            boxShadow: '0 0 20px rgba(249, 115, 22, 0.4)'
           }}>
             <Radio size={24} />
           </div>
@@ -145,7 +145,7 @@ export default function Register() {
 
         <div style={{ textAlign: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '1rem' }}>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-            Already have an account? <Link to="/login" style={{ color: '#8b5cf6', fontWeight: 600 }}>Sign In</Link>
+            Already have an account? <Link to="/login" style={{ color: '#f97316', fontWeight: 600 }}>Sign In</Link>
           </p>
 
           <button

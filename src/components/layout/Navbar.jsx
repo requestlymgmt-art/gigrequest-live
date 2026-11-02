@@ -9,10 +9,7 @@ import {
   LogOut, 
   LogIn, 
   Menu, 
-  X,
-  Sparkles,
-  Sliders,
-  DollarSign
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -49,7 +46,7 @@ export default function Navbar() {
 
   return (
     <header className="no-print" style={{
-      background: 'rgba(10, 11, 16, 0.85)',
+      background: 'rgba(11, 12, 16, 0.92)',
       backdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-subtle)',
       position: 'sticky',
@@ -63,38 +60,38 @@ export default function Navbar() {
         height: '70px',
       }}>
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}>
           <div style={{
             width: '38px',
             height: '38px',
             borderRadius: '10px',
-            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
+            boxShadow: '0 0 16px rgba(249, 115, 22, 0.4)'
           }}>
             <Radio size={20} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.25rem',
+              fontSize: '1.3rem',
               fontWeight: 800,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.025em',
               color: '#fff',
               lineHeight: 1.1
             }}>
-              Gig<span style={{ color: '#8b5cf6' }}>Request</span>
+              Request<span style={{ color: '#f97316' }}>ly</span>
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600 }}>
               LIVE STAGE TIPPING
             </span>
           </div>
         </Link>
 
-        {/* Desktop Nav Links (For logged-in bands or demo mode) */}
+        {/* Desktop Nav Links */}
         {(user || isDemoMode) && (
           <nav style={{ display: 'none', gap: '0.5rem', alignItems: 'center' }} className="desktop-nav">
             {navLinks.map((link) => {
@@ -113,12 +110,12 @@ export default function Navbar() {
                     fontSize: '0.875rem',
                     fontWeight: 600,
                     color: isActive ? '#fff' : 'var(--text-muted)',
-                    background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-                    border: isActive ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid transparent',
+                    background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                    border: isActive ? '1px solid rgba(249, 115, 22, 0.35)' : '1px solid transparent',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Icon size={16} color={isActive ? '#8b5cf6' : 'currentColor'} />
+                  <Icon size={16} color={isActive ? '#f97316' : 'currentColor'} />
                   {link.name}
                 </Link>
               );
@@ -195,9 +192,8 @@ export default function Navbar() {
           {(user || isDemoMode) && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm mobile-toggle"
               style={{ display: 'flex', padding: '0.45rem' }}
-              className="mobile-toggle"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -230,11 +226,11 @@ export default function Navbar() {
                   padding: '0.75rem 1rem',
                   borderRadius: 'var(--radius-md)',
                   color: isActive ? '#fff' : 'var(--text-muted)',
-                  background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+                  background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
                   fontWeight: 600
                 }}
               >
-                <Icon size={18} color={isActive ? '#8b5cf6' : 'currentColor'} />
+                <Icon size={18} color={isActive ? '#f97316' : 'currentColor'} />
                 {link.name}
               </Link>
             );
@@ -249,7 +245,7 @@ export default function Navbar() {
               gap: '0.75rem',
               padding: '0.75rem 1rem',
               borderRadius: 'var(--radius-md)',
-              color: '#38bdf8',
+              color: '#f97316',
               fontWeight: 600
             }}
           >

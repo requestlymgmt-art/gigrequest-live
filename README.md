@@ -1,4 +1,4 @@
-# 🎸 GigRequest Live — Song-Request & Tipping Platform for Musicians
+# 🎸 Requestly — Live Song-Request & Tipping Platform for Musicians
 
 A modern, web-based song-request and tipping platform for live musicians, bands, solo acts, DJs, and venue performers.
 

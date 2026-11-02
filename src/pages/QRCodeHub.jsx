@@ -89,19 +89,19 @@ export default function QRCodeHub() {
         justifyContent: 'space-between',
         gap: '1rem',
         marginBottom: '2.5rem',
-        background: 'rgba(139, 92, 246, 0.08)',
-        borderColor: 'rgba(139, 92, 246, 0.3)'
+        background: 'rgba(249, 115, 22, 0.08)',
+        borderColor: 'rgba(249, 115, 22, 0.35)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            background: 'rgba(139, 92, 246, 0.2)',
+            background: 'rgba(249, 115, 22, 0.18)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#8b5cf6'
+            color: '#f97316'
           }}>
             <Share2 size={20} />
           </div>
@@ -229,7 +229,7 @@ export default function QRCodeHub() {
             borderTop: '1px solid #e2e8f0',
             paddingTop: '1rem'
           }}>
-            Powered by GigRequest • 100% of tips go directly to the musicians
+            Powered by Requestly • 100% of tips go directly to the musicians
           </div>
         </div>
       </div>

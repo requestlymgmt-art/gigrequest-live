@@ -8,11 +8,7 @@ import {
   Radio, 
   CheckCircle2, 
   ArrowRight, 
-  Sparkles,
-  ShieldCheck,
-  Zap,
-  Volume2,
-  Heart
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -46,8 +42,8 @@ export default function Landing() {
         <div className="container" style={{ maxWidth: '900px' }}>
           {/* Badge */}
           <div style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
-            <span className="badge badge-purple" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
-              <Sparkles size={14} /> The Modern Song-Request & Tipping Platform
+            <span className="badge badge-orange" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+              <Sparkles size={14} /> The Live Song-Request & Tipping Platform
             </span>
           </div>
 
@@ -60,7 +56,7 @@ export default function Landing() {
           }}>
             Turn Gig Audiences into <br />
             <span style={{
-              background: 'linear-gradient(135deg, #a78bfa, #f43f5e)',
+              background: 'linear-gradient(135deg, #fb923c, #ea580c)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
@@ -139,8 +135,8 @@ export default function Landing() {
         <div className="container">
           <div className="glass-card" style={{
             padding: '3rem 2rem',
-            background: 'linear-gradient(180deg, rgba(26, 29, 44, 0.8) 0%, rgba(18, 20, 30, 0.95) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.25)',
+            background: 'linear-gradient(180deg, rgba(23, 26, 38, 0.85) 0%, rgba(15, 17, 26, 0.98) 100%)',
+            border: '1px solid rgba(249, 115, 22, 0.25)',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
             position: 'relative',
             overflow: 'hidden'
@@ -191,11 +187,11 @@ export default function Landing() {
                       width: '36px',
                       height: '36px',
                       borderRadius: '8px',
-                      background: 'rgba(139, 92, 246, 0.15)',
+                      background: 'rgba(249, 115, 22, 0.15)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#8b5cf6',
+                      color: '#f97316',
                       flexShrink: 0
                     }}>
                       <Music size={20} />
@@ -234,7 +230,7 @@ export default function Landing() {
 
               {/* Right Column: Live Mock Card */}
               <div style={{
-                background: 'rgba(10, 11, 16, 0.9)',
+                background: 'rgba(11, 12, 16, 0.95)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '1.75rem',
@@ -270,12 +266,12 @@ export default function Landing() {
                 {/* Fan message */}
                 <div style={{
                   background: 'rgba(255, 255, 255, 0.04)',
-                  borderLeft: '3px solid #8b5cf6',
+                  borderLeft: '3px solid #f97316',
                   padding: '1rem',
                   borderRadius: '0 8px 8px 0',
                   marginBottom: '1.25rem'
                 }}>
-                  <div style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '0.2rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#fb923c', fontWeight: 700, marginBottom: '0.2rem' }}>
                     Dave & Sarah (Table 7) says:
                   </div>
                   <div style={{ fontSize: '0.95rem', color: '#e2e8f0', fontStyle: 'italic' }}>
@@ -329,7 +325,7 @@ export default function Landing() {
               <div style={{
                 fontSize: '2rem',
                 fontWeight: 900,
-                color: 'rgba(139, 92, 246, 0.3)',
+                color: 'rgba(249, 115, 22, 0.4)',
                 marginBottom: '0.5rem'
               }}>
                 01
@@ -344,7 +340,7 @@ export default function Landing() {
               <div style={{
                 fontSize: '2rem',
                 fontWeight: 900,
-                color: 'rgba(16, 185, 129, 0.3)',
+                color: 'rgba(16, 185, 129, 0.4)',
                 marginBottom: '0.5rem'
               }}>
                 02
@@ -359,7 +355,7 @@ export default function Landing() {
               <div style={{
                 fontSize: '2rem',
                 fontWeight: 900,
-                color: 'rgba(245, 158, 11, 0.3)',
+                color: 'rgba(245, 158, 11, 0.4)',
                 marginBottom: '0.5rem'
               }}>
                 03
@@ -377,8 +373,8 @@ export default function Landing() {
       <section style={{ padding: '3rem 0' }}>
         <div className="container">
           <div style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(244, 63, 94, 0.15))',
-            border: '1px solid rgba(139, 92, 246, 0.4)',
+            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1))',
+            border: '1px solid rgba(249, 115, 22, 0.4)',
             borderRadius: 'var(--radius-xl)',
             padding: '3.5rem 2rem',
             textAlign: 'center',
@@ -388,7 +384,7 @@ export default function Landing() {
               Ready for Your Next Gig?
             </h2>
             <p style={{ color: 'var(--text-muted)', maxWidth: '550px', marginInline: 'auto', marginBottom: '2rem', fontSize: '1.1rem' }}>
-              Create your musician account today, connect your Stripe, and start earning up to 3x more tips from every crowd.
+              Create your Requestly musician account today, connect your Stripe, and start earning up to 3x more tips from every crowd.
             </p>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link to="/register" className="btn btn-primary btn-lg">

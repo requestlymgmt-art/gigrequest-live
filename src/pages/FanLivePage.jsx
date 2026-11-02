@@ -310,8 +310,8 @@ export default function FanLivePage() {
         padding: '1.75rem 1.5rem',
         marginBottom: '1.25rem',
         textAlign: 'center',
-        background: 'linear-gradient(180deg, rgba(30, 34, 52, 0.8) 0%, rgba(18, 20, 30, 0.95) 100%)',
-        borderColor: 'rgba(139, 92, 246, 0.3)',
+        background: 'linear-gradient(180deg, rgba(23, 26, 38, 0.85) 0%, rgba(15, 17, 26, 0.98) 100%)',
+        borderColor: 'rgba(249, 115, 22, 0.35)',
         boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
         position: 'relative'
       }}>
@@ -322,9 +322,9 @@ export default function FanLivePage() {
           borderRadius: '50%',
           margin: '0 auto 1rem',
           overflow: 'hidden',
-          border: '3px solid #8b5cf6',
-          boxShadow: '0 0 20px rgba(139, 92, 246, 0.4)',
-          background: '#1e1b4b',
+          border: '3px solid #f97316',
+          boxShadow: '0 0 20px rgba(249, 115, 22, 0.4)',
+          background: '#1a1008',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
@@ -332,7 +332,7 @@ export default function FanLivePage() {
           {band.avatar_url ? (
             <img src={band.avatar_url} alt={band.band_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <Music size={40} color="#a78bfa" />
+            <Music size={40} color="#fb923c" />
           )}
         </div>
 
@@ -354,7 +354,7 @@ export default function FanLivePage() {
         </h1>
 
         {band.genre && (
-          <p style={{ fontSize: '0.875rem', color: '#c084fc', fontWeight: 600, marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.875rem', color: '#fb923c', fontWeight: 600, marginBottom: '0.75rem' }}>
             {band.genre}
           </p>
         )}
@@ -368,8 +368,8 @@ export default function FanLivePage() {
         {/* Announcement Banner */}
         {band.announcement_banner && (
           <div style={{
-            background: 'rgba(139, 92, 246, 0.12)',
-            border: '1px solid rgba(139, 92, 246, 0.25)',
+            background: 'rgba(249, 115, 22, 0.12)',
+            border: '1px solid rgba(249, 115, 22, 0.25)',
             borderRadius: 'var(--radius-md)',
             padding: '0.65rem 0.85rem',
             fontSize: '0.85rem',
@@ -458,8 +458,8 @@ export default function FanLivePage() {
                   padding: '0.35rem 0.75rem',
                   borderRadius: 'var(--radius-full)',
                   border: '1px solid',
-                  borderColor: selectedGenre === g ? 'var(--accent-purple)' : 'var(--border-subtle)',
-                  background: selectedGenre === g ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                  borderColor: selectedGenre === g ? 'var(--accent-orange)' : 'var(--border-subtle)',
+                  background: selectedGenre === g ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                   color: selectedGenre === g ? '#fff' : 'var(--text-muted)',
                   fontSize: '0.75rem',
                   fontWeight: 600,
@@ -547,19 +547,19 @@ export default function FanLivePage() {
           style={{
             padding: '1.25rem',
             textAlign: 'center',
-            border: '1px dashed var(--accent-purple)',
-            background: 'rgba(139, 92, 246, 0.05)',
+            border: '1px dashed var(--accent-orange)',
+            background: 'rgba(249, 115, 22, 0.05)',
             cursor: 'pointer'
           }}
         >
-          <Sparkles size={20} color="#a78bfa" style={{ marginBottom: '0.35rem' }} />
+          <Sparkles size={20} color="#fb923c" style={{ marginBottom: '0.35rem' }} />
           <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '0.2rem' }}>
             Can't find your song in the list?
           </h4>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
             Request any custom song for the band to play or jam!
           </p>
-          <span className="badge badge-purple">
+          <span className="badge badge-orange">
             Custom Request • ${(Number(band.custom_request_price) || 15).toFixed(2)}
           </span>
         </div>
@@ -571,7 +571,7 @@ export default function FanLivePage() {
           <div className="modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
-                <span className="badge badge-purple" style={{ marginBottom: '0.35rem' }}>
+                <span className="badge badge-orange" style={{ marginBottom: '0.35rem' }}>
                   {isCustomRequest ? 'CUSTOM SONG REQUEST' : 'SONG REQUEST'}
                 </span>
                 <h3 style={{ fontSize: '1.4rem' }}>
@@ -631,8 +631,8 @@ export default function FanLivePage() {
                         padding: '0.55rem',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid',
-                        borderColor: (!customTipInput && tipBoost === amount) ? 'var(--accent-purple)' : 'var(--border-subtle)',
-                        background: (!customTipInput && tipBoost === amount) ? 'rgba(139, 92, 246, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                        borderColor: (!customTipInput && tipBoost === amount) ? 'var(--accent-orange)' : 'var(--border-subtle)',
+                        background: (!customTipInput && tipBoost === amount) ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                         color: '#fff',
                         fontWeight: 700,
                         fontSize: '0.85rem',

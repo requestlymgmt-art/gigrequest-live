@@ -247,7 +247,7 @@ export default function Dashboard() {
           </button>
 
           <Link to="/stage-mode" className="btn btn-outline btn-sm">
-            <Tv size={16} color="#8b5cf6" />
+            <Tv size={16} color="#f97316" />
             <span>Stage Mode</span>
           </Link>
 
@@ -283,7 +283,7 @@ export default function Dashboard() {
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Queue</span>
-            <div style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', padding: '0.35rem', borderRadius: '8px' }}>
+            <div style={{ background: 'rgba(249, 115, 22, 0.15)', color: '#f97316', padding: '0.35rem', borderRadius: '8px' }}>
               <Clock size={18} />
             </div>
           </div>
@@ -349,7 +349,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'live' ? 'var(--accent-purple)' : 'transparent',
+              background: activeTab === 'live' ? 'var(--accent-orange)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -364,7 +364,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'completed' ? 'var(--accent-purple)' : 'transparent',
+              background: activeTab === 'completed' ? 'var(--accent-orange)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -379,7 +379,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'all' ? 'var(--accent-purple)' : 'transparent',
+              background: activeTab === 'all' ? 'var(--accent-orange)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -412,7 +412,7 @@ export default function Dashboard() {
         </div>
       ) : sortedRequests.length === 0 ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Radio size={40} color="#8b5cf6" style={{ marginBottom: '1rem', opacity: 0.6 }} />
+          <Radio size={40} color="#f97316" style={{ marginBottom: '1rem', opacity: 0.7 }} />
           <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>No Requests in this View</h3>
           <p style={{ color: 'var(--text-muted)', maxWidth: '480px', marginInline: 'auto', marginBottom: '1.5rem' }}>
             {activeTab === 'live' 
@@ -446,7 +446,7 @@ export default function Dashboard() {
                     : isUpNext 
                     ? 'rgba(245, 158, 11, 0.5)' 
                     : req.is_pinned 
-                    ? 'rgba(139, 92, 246, 0.5)' 
+                    ? 'rgba(249, 115, 22, 0.55)' 
                     : 'var(--border-subtle)',
                   background: isPlaying 
                     ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(18, 20, 30, 0.95))' 
@@ -488,7 +488,7 @@ export default function Dashboard() {
                         </span>
                       )}
                       {req.is_pinned && (
-                        <span className="badge badge-purple">
+                        <span className="badge badge-orange">
                           <Pin size={12} /> PINNED
                         </span>
                       )}
@@ -506,7 +506,7 @@ export default function Dashboard() {
                       </p>
                     )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#c084fc', fontSize: '0.9rem', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fb923c', fontSize: '0.9rem', fontWeight: 600 }}>
                       <Heart size={14} /> Requested by: {req.fan_name || 'Anonymous Fan'}
                     </div>
                   </div>
@@ -535,7 +535,7 @@ export default function Dashboard() {
                 {req.fan_message && (
                   <div style={{
                     background: 'rgba(255, 255, 255, 0.04)',
-                    borderLeft: '3px solid #8b5cf6',
+                    borderLeft: '3px solid #f97316',
                     padding: '0.75rem 1rem',
                     borderRadius: '0 8px 8px 0',
                     marginBottom: '1rem',
@@ -543,7 +543,7 @@ export default function Dashboard() {
                     alignItems: 'flex-start',
                     gap: '0.6rem'
                   }}>
-                    <MessageSquare size={16} color="#c084fc" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <MessageSquare size={16} color="#fb923c" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <p style={{ fontSize: '0.95rem', color: '#f1f5f9', fontStyle: 'italic', lineHeight: 1.5 }}>
                       "{req.fan_message}"
                     </p>
@@ -610,7 +610,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => handleTogglePin(req)}
                     className="btn btn-outline btn-sm"
-                    style={{ color: req.is_pinned ? '#8b5cf6' : 'var(--text-dim)' }}
+                    style={{ color: req.is_pinned ? '#f97316' : 'var(--text-dim)' }}
                     title={req.is_pinned ? 'Unpin request' : 'Pin to top of stage list'}
                   >
                     <Pin size={14} />

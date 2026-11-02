@@ -323,7 +323,7 @@ export default function Setlist() {
         <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }} />
         <div>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block' }}>Average Song Price</span>
-          <strong style={{ fontSize: '1.25rem', color: '#8b5cf6' }}>${avgPrice}</strong>
+          <strong style={{ fontSize: '1.25rem', color: '#f97316' }}>${avgPrice}</strong>
         </div>
       </div>
 
@@ -359,8 +359,8 @@ export default function Setlist() {
                 padding: '0.4rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
                 border: '1px solid',
-                borderColor: selectedGenre === g ? 'var(--accent-purple)' : 'var(--border-subtle)',
-                background: selectedGenre === g ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                borderColor: selectedGenre === g ? 'var(--accent-orange)' : 'var(--border-subtle)',
+                background: selectedGenre === g ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.03)',
                 color: selectedGenre === g ? '#fff' : 'var(--text-muted)',
                 fontSize: '0.8rem',
                 fontWeight: 600,
@@ -382,7 +382,7 @@ export default function Setlist() {
         </div>
       ) : filteredSongs.length === 0 ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Music2 size={40} color="#8b5cf6" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+          <Music2 size={40} color="#f97316" style={{ marginBottom: '1rem', opacity: 0.7 }} />
           <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>No Songs Found</h3>
           <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginInline: 'auto', marginBottom: '1.5rem' }}>
             Add your songs or paste your full setlist so fans can start requesting tracks at your gig.
@@ -448,7 +448,7 @@ export default function Setlist() {
                           width: '75px',
                           padding: '0.35rem 0.5rem',
                           background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--accent-purple)',
+                          border: '1px solid var(--accent-orange)',
                           borderRadius: '6px',
                           color: '#fff',
                           fontWeight: 700

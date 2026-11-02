@@ -196,13 +196,13 @@ export default function StageMode() {
                 {/* Fan Shoutout Banner in Huge Text */}
                 {currentPlaying.fan_message && (
                   <div style={{
-                    background: 'rgba(139, 92, 246, 0.2)',
-                    border: '2px solid rgba(139, 92, 246, 0.5)',
+                    background: 'rgba(249, 115, 22, 0.18)',
+                    border: '2px solid rgba(249, 115, 22, 0.5)',
                     padding: '1.5rem',
                     borderRadius: '16px',
                     marginBottom: '2rem'
                   }}>
-                    <div style={{ fontSize: '1.1rem', color: '#c084fc', fontWeight: 800, marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '1.1rem', color: '#fb923c', fontWeight: 800, marginBottom: '0.4rem' }}>
                       📢 DEDICATION FROM: {currentPlaying.fan_name || 'Fan'}
                     </div>
                     <div style={{ fontSize: '1.5rem', color: '#f8fafc', fontWeight: 700, fontStyle: 'italic', lineHeight: 1.4 }}>

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Radio, Heart, ShieldCheck } from 'lucide-react';
+import { Radio } from 'lucide-react';
 
 export default function Footer() {
   return (
     <footer className="no-print" style={{
       borderTop: '1px solid var(--border-subtle)',
-      background: 'rgba(8, 9, 13, 0.95)',
+      background: 'rgba(9, 10, 15, 0.95)',
       padding: '3rem 0 2rem',
       marginTop: 'auto'
     }}>
@@ -21,17 +21,18 @@ export default function Footer() {
             width: '32px',
             height: '32px',
             borderRadius: '8px',
-            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff'
+            color: '#fff',
+            boxShadow: '0 0 12px rgba(249, 115, 22, 0.35)'
           }}>
             <Radio size={16} />
           </div>
           <div>
             <strong style={{ fontSize: '1.1rem', color: '#fff' }}>
-              Gig<span style={{ color: '#8b5cf6' }}>Request</span>
+              Request<span style={{ color: '#f97316' }}>ly</span>
             </strong>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
               Live Song Requests & Tipping Platform for Musicians
