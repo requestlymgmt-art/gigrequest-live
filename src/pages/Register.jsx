@@ -1,205 +1,161 @@
-// src/pages/Register.jsx
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
-import { registerWithEmail as register, loginWithGoogle } from '../firebase/auth';
-import {
-  hasNativeGoogleSignInBridge,
-  isNativeWebView,
-  requestNativeGoogleSignIn,
-} from '../utils/webview';
+import { Link, useNavigate } from 'react-router-dom';
+import { Radio, Music2, ArrowRight, Sparkles } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function Register() {
+  const { signUp, enterDemoMode } = useAuth();
   const navigate = useNavigate();
+
+  const [bandName, setBandName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'artist'
-  });
 
-  const handleSubmit = async (e) => {
+  const handleBandNameChange = (val) => {
+    setBandName(val);
+    if (!slug || slug === bandName.toLowerCase().replace(/[^a-z0-9-]/g, '-')) {
+      setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'));
+    }
+  };
+
+  const handleRegister = async (e) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+    if (!bandName.trim() || !slug.trim()) {
+      toast.error('Please enter your band name and URL slug');
       return;
     }
-    
-    if (formData.username.length < 3) {
-      toast.error('Username must be at least 3 characters');
-      return;
-    }
-
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.username, formData.role);
-      toast.success('Account created successfully!');
-      navigate('/');
+      await signUp(email, password, bandName.trim(), slug.trim());
+      toast.success('Band profile created! Welcome to GigRequest!');
+      navigate('/dashboard');
     } catch (err) {
-      toast.error(err.message || 'Failed to create account');
+      console.error('Registration error:', err);
+      toast.error(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider) => {
-    if (provider !== 'google') return;
-    setLoading(true);
-    try {
-      if (isNativeWebView() && hasNativeGoogleSignInBridge()) {
-        await requestNativeGoogleSignIn(formData.role);
-      } else {
-        await loginWithGoogle(formData.role);
-      }
-      navigate('/');
-    } catch (err) {
-      toast.error(err.message || `Failed to sign in with ${provider}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleOpenDemo = async () => {
+    await enterDemoMode();
+    toast.success('Loaded demo band');
+    navigate('/dashboard');
   };
 
   return (
-    <div className="auth-container">
-      <button className="auth-back-btn" onClick={() => navigate('/')}>
-        <ArrowLeft size={16} /> Back to Home
-      </button>
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-logo">
-            <img src="/mainlogo2.png" alt="BookmarkChat Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+    <div style={{
+      minHeight: '85vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 1rem'
+    }}>
+      <div className="glass-card" style={{ maxWidth: '460px', width: '100%', padding: '2.5rem 2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            marginBottom: '1rem',
+            boxShadow: '0 0 20px rgba(139, 92, 246, 0.4)'
+          }}>
+            <Radio size={24} />
           </div>
-          <h1 className="auth-title">Join the Movement</h1>
-          <p className="auth-subtitle">Create your artist profile and start sharing your sound.</p>
+          <h2 style={{ fontSize: '1.85rem', marginBottom: '0.35rem' }}>Create Band Account</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Set your setlist, connect Stripe, and start taking paid requests.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="input-group">
-            <label className="input-label">Username</label>
-            <div className="input-wrapper">
-              <User size={18} className="input-icon" />
+        <form onSubmit={handleRegister}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="label">Band or Artist Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Neon Velvet, The Groove Band"
+              value={bandName}
+              onChange={(e) => handleBandNameChange(e.target.value)}
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="label">Your Public Fan URL *</label>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ padding: '0.75rem 0.65rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRight: 'none', borderRadius: 'var(--radius-md) 0 0 var(--radius-md)', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                /live/
+              </span>
               <input
                 type="text"
-                className="input input-with-icon"
-                placeholder="Artist or display name"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                placeholder="neon-velvet"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                className="input-field"
+                style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
                 required
               />
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Email</label>
-            <div className="input-wrapper">
-              <Mail size={18} className="input-icon" />
-              <input
-                type="email"
-                className="input input-with-icon"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="label">Email Address *</label>
+            <input
+              type="email"
+              placeholder="musician@band.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-field"
+              required
+            />
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div className="input-wrapper">
-              <Lock size={18} className="input-icon" />
-              <input
-                type="password"
-                className="input input-with-icon"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Confirm Password</label>
-            <div className="input-wrapper">
-              <Lock size={18} className="input-icon" />
-              <input
-                type="password"
-                className="input input-with-icon"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Account Type</label>
-            <div className="role-selector" style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-              <button
-                type="button"
-                className={`btn ${formData.role === 'artist' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setFormData({ ...formData, role: 'artist' })}
-                style={{ flex: 1 }}
-              >
-                Artist
-              </button>
-              <button
-                type="button"
-                className={`btn ${formData.role === 'listener' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setFormData({ ...formData, role: 'listener' })}
-                style={{ flex: 1 }}
-              >
-                Listener
-              </button>
-            </div>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label className="label">Password *</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-field"
+              required
+              minLength={6}
+            />
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary btn-block"
             disabled={loading}
-            style={{ marginTop: '10px' }}
+            className="btn btn-primary btn-lg"
+            style={{ width: '100%', marginBottom: '1rem' }}
           >
-            {loading ? (
-              <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
-            ) : (
-              <>
-                Create Account <ArrowRight size={18} />
-              </>
-            )}
+            <span>{loading ? 'Setting up Profile...' : 'Create Musician Account'}</span>
+            <ArrowRight size={18} />
           </button>
         </form>
 
-        <div className="auth-divider">
-          <span>OR CONTINUE WITH</span>
-        </div>
+        <div style={{ textAlign: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '1rem' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+            Already have an account? <Link to="/login" style={{ color: '#8b5cf6', fontWeight: 600 }}>Sign In</Link>
+          </p>
 
-        <div className="auth-social">
           <button
-            type="button"
-            className="btn btn-outline google-btn"
-            onClick={() => handleSocialLogin('google')}
+            onClick={handleOpenDemo}
+            className="btn btn-outline btn-sm"
+            style={{ width: '100%' }}
           >
-            <svg className="google-icon" viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Google
+            <Sparkles size={14} color="#f59e0b" />
+            <span>Or Explore Live Demo Band Immediately</span>
           </button>
-        </div>
-
-        <div className="auth-footer">
-          Already have an account? <Link to="/login">Sign in</Link>
         </div>
       </div>
     </div>

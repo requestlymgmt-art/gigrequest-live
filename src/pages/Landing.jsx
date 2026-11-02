@@ -1,524 +1,406 @@
-// src/pages/Landing.jsx
-import { useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
-import {
-  Music, Trophy, TrendingUp, Zap, ArrowRight,
-  Play, Flame, ChevronDown, Upload, Star, Radio, Users
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  QrCode, 
+  DollarSign, 
+  Music, 
+  Smartphone, 
+  Radio, 
+  CheckCircle2, 
+  ArrowRight, 
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Volume2,
+  Heart
 } from 'lucide-react';
-import '../styles/landing.css';
-
-/* ─── Platform Features (replaces fake stats) ─────────────────────────────── */
-const PLATFORM_FEATURES = [
-  {
-    icon: TrendingUp,
-    color: '#a855f7',
-    label: 'Live Rankings',
-    desc: 'Real-time community-powered charts. Every stream moves the needle.',
-    tag: 'LIVE',
-  },
-  {
-    icon: Zap,
-    color: '#facc15',
-    label: 'Fresh Drops',
-    desc: 'Every upload gets equal front-page visibility. No follower count required.',
-    tag: 'NEW',
-  },
-  {
-    icon: Trophy,
-    color: '#f59e0b',
-    label: 'Gold Tape Awards',
-    desc: 'Monthly recognition for rising independent talent. Compete. Win. Grow.',
-    tag: 'MONTHLY',
-  },
-  {
-    icon: Star,
-    color: '#22c55e',
-    label: 'Artist Discovery',
-    desc: 'Listeners find their next favourite artist through curated genre feeds.',
-    tag: 'EXPLORE',
-  },
-];
-
-/* ─── Recent Drops using real album covers ──────────────────────────────────── */
-const RECENT_DROPS = [
-  {
-    cover: '/50BE1900-5D33-42B5-975D-410967114B15.png',
-    title: 'Hold The Plug',
-    artist: 'MASK504',
-    genre: 'Hip Hop',
-    rank: 1,
-  },
-  {
-    cover: '/6A507A63-FE01-4DD2-A50B-DB0F339AE615.jpeg',
-    title: 'John 3:16',
-    artist: 'MASK504',
-    genre: 'Rap',
-    rank: 2,
-  },
-  {
-    cover: '/72A736BB-2659-41AE-8AC5-1EFDDB864A5A.png',
-    title: 'Holy',
-    artist: 'MASK504',
-    genre: 'Hip Hop',
-    rank: 3,
-  },
-];
-
-/* ─── Why Artists Join ──────────────────────────────────────────────────────── */
-const WHY_CARDS = [
-  {
-    icon: Upload,
-    color: '#a855f7',
-    title: 'Upload Music',
-    desc: 'Drop your tracks directly on the platform. No label. No gatekeeping.',
-  },
-  {
-    icon: TrendingUp,
-    color: '#22c55e',
-    title: 'Build Fans',
-    desc: 'Live rankings give every upload a fair shot at reaching new listeners.',
-  },
-  {
-    icon: Trophy,
-    color: '#facc15',
-    title: 'Earn Recognition',
-    desc: 'Compete for Gold Tape Awards — monthly recognition for independent artists.',
-  },
-  {
-    icon: Radio,
-    color: '#3b82f6',
-    title: 'No Label Required',
-    desc: 'Keep 100% of your rights. Your music, your brand, your audience.',
-  },
-];
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function Landing() {
+  const { enterDemoMode } = useAuth();
   const navigate = useNavigate();
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [activeTrack, setActiveTrack] = useState(null);
-  const videoRef = useRef(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
+  const handleLaunchDemo = async () => {
+    setLoadingDemo(true);
+    try {
+      await enterDemoMode();
+      toast.success('Loaded live demo band: The Groove Collective!');
+      navigate('/dashboard');
+    } catch (err) {
+      toast.error('Could not load demo');
+    } finally {
+      setLoadingDemo(false);
     }
-  }, []);
+  };
 
   return (
-    <div className="landing-page">
-
-      {/* ─── Top Nav ──────────────────────────────────────────────────────── */}
-      <nav className="landing-nav">
-        <div className="landing-nav-inner">
-          <div className="landing-logo">
-            <img src="/mainlogo2.png" alt="BookmarkChat Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="landing-nav-actions">
-            <button className="landing-nav-link" onClick={() => navigate('/login')}>Sign In</button>
-            <button className="btn btn-primary landing-nav-cta" onClick={() => navigate('/register')}>
-              Join Free
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* ─── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="landing-hero">
-        {/* Video background */}
-        <div className="hero-video-bg">
-          <video
-            ref={videoRef}
-            className="hero-video"
-            src="/C67A763E-491A-4D42-B072-A4B6BCD1A68C.mov"
-            autoPlay
-            muted
-            loop
-            playsInline
-            onCanPlay={() => setVideoLoaded(true)}
-          />
-          <div className="hero-video-overlay" />
-        </div>
-
-        {/* Ambient orbs */}
-        <div className="landing-hero-bg">
-          <div className="hero-orb hero-orb-1" />
-          <div className="hero-orb hero-orb-2" />
-          <div className="hero-stars" />
-        </div>
-
-        <div className="landing-hero-inner">
-          {/* Left: Text */}
-          <div className="landing-hero-text">
-            <div className="landing-eyebrow">
-              <span className="eyebrow-dot" />
-              Upload Music. Get Discovered. Build Fans.
-            </div>
-            <h1 className="landing-hero-h1" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.3rem)', lineHeight: 1.2, textWrap: 'balance' }}>
-              Where Independent Artists{' '}
-              <span className="hero-gradient-text">Get Discovered</span>
-              <br />Before the Industry Finds Them
-            </h1>
-            <p className="landing-hero-sub">
-              Upload your music, get discovered, build fans, climb the live rankings, and compete for the{' '}
-              <strong className="gold-accent">Gold Tape Award</strong>—no label required.
-            </p>
-            <div className="landing-hero-ctas">
-              <button className="landing-cta-primary" onClick={() => navigate('/register')}>
-                <Upload size={18} /> Upload Your Music
-              </button>
-              <button className="landing-cta-ghost" onClick={() => navigate('/login')}>
-                Explore Platform <ArrowRight size={16} />
-              </button>
-            </div>
-
-            {/* Platform feature pills */}
-            <div className="hero-feature-pills">
-              <div className="feature-pill"><TrendingUp size={13} /> Live Rankings</div>
-              <div className="feature-pill"><Zap size={13} /> Fresh Drops</div>
-              <div className="feature-pill pill-gold"><Trophy size={13} /> Gold Tape Awards</div>
-              <div className="feature-pill"><Star size={13} /> Artist Discovery</div>
-            </div>
+    <div style={{ paddingBottom: '5rem' }}>
+      {/* Hero Section */}
+      <section style={{
+        padding: '5rem 0 4rem',
+        textAlign: 'center',
+        position: 'relative'
+      }}>
+        <div className="container" style={{ maxWidth: '900px' }}>
+          {/* Badge */}
+          <div style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
+            <span className="badge badge-purple" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+              <Sparkles size={14} /> The Modern Song-Request & Tipping Platform
+            </span>
           </div>
 
-          {/* Right: Gold Tape Award trophy + artist photo */}
-          <div className="landing-hero-visual">
-            <div className="hero-award-frame">
-              {/* Main award image */}
-              <img
-                src="/hero.png"
-                alt="Gold Tape Award — Monthly recognition for independent artists"
-                className="hero-award-img"
-              />
-              {/* Artist portrait floating card */}
-              <div className="hero-artist-badge">
-                <img
-                  src="/A8108A3F-CC10-44C2-BEF9-0EA4F67E9F1A.jpeg"
-                  alt="MASK504 artist photo"
-                  className="artist-badge-img"
-                />
-                <div className="artist-badge-info">
-                  <span className="artist-badge-name">MASK504</span>
-                  <span className="artist-badge-label">🏆 Gold Tape Winner</span>
-                </div>
-              </div>
-              {/* Live ranking card */}
-              <div className="hero-ranking-card">
-                <div className="live-pulse" />
-                <span className="ranking-label">LIVE</span>
-                <span className="ranking-text">Rankings updating</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          <h1 style={{
+            fontSize: 'clamp(2.5rem, 6vw, 4.2rem)',
+            fontWeight: 800,
+            lineHeight: 1.1,
+            marginBottom: '1.5rem',
+            letterSpacing: '-0.03em'
+          }}>
+            Turn Gig Audiences into <br />
+            <span style={{
+              background: 'linear-gradient(135deg, #a78bfa, #f43f5e)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Active Tippers & Requesters
+            </span>
+          </h1>
 
-        <div className="landing-scroll-hint">
-          <ChevronDown size={20} />
-        </div>
-      </section>
-
-      {/* ─── Platform Features (replaces fake stats) ──────────────────────── */}
-      <section className="landing-platform-features">
-        <div className="landing-section-inner">
-          <div className="section-label">Platform Features</div>
-          <h2 className="landing-section-title">Discover. Upload. Compete.</h2>
-          <p className="landing-section-sub">
-            Everything built for the independent artist — from your first upload to your first award.
+          <p style={{
+            fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
+            color: 'var(--text-muted)',
+            lineHeight: 1.6,
+            marginBottom: '2.5rem',
+            maxWidth: '720px',
+            marginInline: 'auto'
+          }}>
+            Fans scan a QR code at your gig, pick songs from your personal setlist, and pay to request them via Stripe. 
+            <strong style={{ color: '#fff' }}> The processing fee is charged to the fan</strong>, so you keep 100% of your tips.
           </p>
-          <div className="platform-features-grid">
-            {PLATFORM_FEATURES.map((f, i) => (
-              <div key={i} className="platform-feature-card" style={{ '--feat-color': f.color }}>
-                <div className="pf-tag" style={{ color: f.color, borderColor: `${f.color}40`, background: `${f.color}12` }}>
-                  {f.tag}
-                </div>
-                <div className="pf-icon" style={{ background: `${f.color}18`, color: f.color }}>
-                  <f.icon size={24} />
-                </div>
-                <h3 className="pf-label">{f.label}</h3>
-                <p className="pf-desc">{f.desc}</p>
-                <div className="pf-arrow"><ArrowRight size={14} /></div>
-              </div>
-            ))}
+
+          {/* Call to Actions */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: '3rem'
+          }}>
+            <button
+              onClick={handleLaunchDemo}
+              disabled={loadingDemo}
+              className="btn btn-primary btn-lg"
+            >
+              <Radio size={20} />
+              <span>{loadingDemo ? 'Opening Stage...' : 'Launch Live Band Demo'}</span>
+              <ArrowRight size={18} />
+            </button>
+
+            <Link
+              to="/live/groove-collective"
+              className="btn btn-outline btn-lg"
+              target="_blank"
+            >
+              <Smartphone size={20} />
+              <span>Test Public Fan Page</span>
+            </Link>
+          </div>
+
+          {/* Social Proof Pill */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '1.5rem',
+            padding: '0.75rem 1.5rem',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-full)',
+            fontSize: '0.875rem',
+            color: 'var(--text-muted)'
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#10b981" /> Zero App Downloads
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#10b981" /> 100% Direct Stripe Payouts
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#10b981" /> Real-Time Stage Alerts
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ─── Recent Drops / Rankings showcase ────────────────────────────── */}
-      <section className="landing-rankings">
-        <div className="landing-section-inner">
-          <div className="rankings-header">
-            <div>
-              <div className="section-label">
-                <span className="live-dot-inline" />
-                Live Rankings
-              </div>
-              <h2 className="landing-section-title" style={{ margin: 0 }}>
-                Trending Right Now
-              </h2>
-            </div>
-            <button className="see-all-btn" onClick={() => navigate('/login')}>
-              See All Charts <ArrowRight size={14} />
-            </button>
-          </div>
+      {/* Live Experience Interactive Preview */}
+      <section style={{ padding: '2rem 0 4rem' }}>
+        <div className="container">
+          <div className="glass-card" style={{
+            padding: '3rem 2rem',
+            background: 'linear-gradient(180deg, rgba(26, 29, 44, 0.8) 0%, rgba(18, 20, 30, 0.95) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '3rem',
+              alignItems: 'center'
+            }}>
+              {/* Left Column: What Musician Sees */}
+              <div>
+                <span className="badge badge-emerald" style={{ marginBottom: '1rem' }}>
+                  <Radio size={14} /> LIVE STAGE COMMAND CENTER
+                </span>
+                <h2 style={{ fontSize: '2.2rem', marginBottom: '1rem' }}>
+                  Watch Requests & Tips Roll in Real-Time
+                </h2>
+                <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                  Keep your iPad or phone on your mic stand. As soon as a fan pays, the request pops up with their shoutout message, dedication, and payment confirmation.
+                </p>
 
-          <div className="rankings-tracks">
-            {RECENT_DROPS.map((track, i) => (
-              <div
-                key={i}
-                className={`track-row ${activeTrack === i ? 'track-row-active' : ''}`}
-                onClick={() => setActiveTrack(activeTrack === i ? null : i)}
-              >
-                <div className="track-rank">
-                  <span className="rank-num">#{track.rank}</span>
-                </div>
-                <div className="track-cover-wrap">
-                  <img src={track.cover} alt={track.title} className="track-cover" />
-                  <div className="track-play-overlay">
-                    <Play size={16} fill="white" color="white" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#10b981',
+                      flexShrink: 0
+                    }}>
+                      <DollarSign size={20} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', marginBottom: '0.2rem' }}>Fan Pays All Fees</h4>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        If a song is $10 and the fan adds a $5 tip, you get $15. The Stripe processing fee is transparently added on the fan's receipt.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'rgba(139, 92, 246, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#8b5cf6',
+                      flexShrink: 0
+                    }}>
+                      <Music size={20} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', marginBottom: '0.2rem' }}>Full Setlist Control</h4>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        Set individual prices per song ($5 for easy hits, $15 for hard vocal tracks) or allow custom song bids.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#f59e0b',
+                      flexShrink: 0
+                    }}>
+                      <QrCode size={20} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', marginBottom: '0.2rem' }}>Instant QR Code Generation</h4>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        Print table-tents or display on your stage banner. Fans scan with their default camera app and are ready in seconds.
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="track-info">
-                  <div className="track-title">{track.title}</div>
-                  <div className="track-artist">{track.artist} · {track.genre}</div>
+              </div>
+
+              {/* Right Column: Live Mock Card */}
+              <div style={{
+                background: 'rgba(10, 11, 16, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '1.75rem',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingBottom: '1rem',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  marginBottom: '1.25rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="live-pulse" />
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>Incoming Live Request</span>
+                  </div>
+                  <span className="badge badge-emerald">PAID VIA STRIPE</span>
                 </div>
-                <div className="track-waveform">
-                  {[...Array(12)].map((_, j) => (
-                    <div
-                      key={j}
-                      className={`waveform-bar ${activeTrack === i ? 'waveform-active' : ''}`}
-                      style={{ height: `${20 + Math.sin(j * 1.2) * 14}px` }}
-                    />
-                  ))}
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Song Requested
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>
+                    Tennessee Whiskey
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    Original by Chris Stapleton
+                  </div>
                 </div>
-                <div className="track-badge-trending">
-                  <Flame size={12} /> Trending
+
+                {/* Fan message */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  borderLeft: '3px solid #8b5cf6',
+                  padding: '1rem',
+                  borderRadius: '0 8px 8px 0',
+                  marginBottom: '1.25rem'
+                }}>
+                  <div style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '0.2rem' }}>
+                    Dave & Sarah (Table 7) says:
+                  </div>
+                  <div style={{ fontSize: '0.95rem', color: '#e2e8f0', fontStyle: 'italic' }}>
+                    "Happy 10th anniversary to my lovely wife! You guys sound incredible tonight, thank you!"
+                  </div>
+                </div>
+
+                {/* Financial breakdown */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                      Band Payout (Song + $15 Tip)
+                    </span>
+                    <strong style={{ fontSize: '1.35rem', color: '#34d399' }}>+$25.00</strong>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                      Fan Covered Fee
+                    </span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', fontWeight: 600 }}>$1.03</span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="rankings-cta-row">
-            <p className="rankings-cta-text">
-              Upload your track and see where you rank in the community.
-            </p>
-            <button className="rankings-upload-btn" onClick={() => navigate('/register')}>
-              <Upload size={16} /> Start Uploading
-            </button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Gold Tape Award Spotlight ────────────────────────────────────── */}
-      <section className="landing-award-spotlight">
-        <div className="award-spotlight-inner">
-          <div className="award-spotlight-visual">
-            <div className="award-glow-ring" />
-            <img
-              src="/hero.png"
-              alt="Gold Tape Award"
-              className="award-spotlight-trophy"
-            />
+      {/* 3 Step Workflow */}
+      <section style={{ padding: '3rem 0' }}>
+        <div className="container" style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '2.4rem', marginBottom: '0.75rem' }}>How It Works at Gigs</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '3rem', maxWidth: '600px', marginInline: 'auto' }}>
+            Built by and for musicians. No complex app installs, no awkward cash jars, just clean digital tipping.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            <div className="glass-card" style={{ textAlign: 'left' }}>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: 900,
+                color: 'rgba(139, 92, 246, 0.3)',
+                marginBottom: '0.5rem'
+              }}>
+                01
+              </div>
+              <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Add Setlist & Pricing</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                Paste your songs into our setlist manager in 30 seconds. Choose how much each song costs to request ($5, $10, etc.).
+              </p>
+            </div>
+
+            <div className="glass-card" style={{ textAlign: 'left' }}>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: 900,
+                color: 'rgba(16, 185, 129, 0.3)',
+                marginBottom: '0.5rem'
+              }}>
+                02
+              </div>
+              <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Place QR Code On Stage</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                Download your printable table-tent flyer or stage banner sign. Fans point their phone cameras and your menu opens instantly.
+              </p>
+            </div>
+
+            <div className="glass-card" style={{ textAlign: 'left' }}>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: 900,
+                color: 'rgba(245, 158, 11, 0.3)',
+                marginBottom: '0.5rem'
+              }}>
+                03
+              </div>
+              <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Get Paid in Real Time</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                Fans pay securely via Apple Pay, Google Pay, or Card. Songs land in your live queue, you play them, and keep 100% of the funds.
+              </p>
+            </div>
           </div>
-          <div className="award-spotlight-content">
-            <div className="section-label" style={{ color: '#facc15' }}>Monthly Awards</div>
-            <h2 className="landing-section-title award-title">
-              The <span className="gold-gradient-text">Gold Tape Award</span>
+        </div>
+      </section>
+
+      {/* CTA Box */}
+      <section style={{ padding: '3rem 0' }}>
+        <div className="container">
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(244, 63, 94, 0.15))',
+            border: '1px solid rgba(139, 92, 246, 0.4)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '3.5rem 2rem',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+              Ready for Your Next Gig?
             </h2>
-            <p className="landing-section-sub" style={{ marginBottom: 28 }}>
-              Every month, the community crowns the most impactful independent artist.
-              No label backing needed — just raw talent and real listeners.
+            <p style={{ color: 'var(--text-muted)', maxWidth: '550px', marginInline: 'auto', marginBottom: '2rem', fontSize: '1.1rem' }}>
+              Create your musician account today, connect your Stripe, and start earning up to 3x more tips from every crowd.
             </p>
-            <ul className="award-list">
-              <li><Trophy size={15} color="#facc15" /> Voted by the community</li>
-              <li><TrendingUp size={15} color="#a855f7" /> Based on real streams &amp; engagement</li>
-              <li><Star size={15} color="#22c55e" /> Open to every artist on the platform</li>
-              <li><Zap size={15} color="#3b82f6" /> Winners featured on the homepage</li>
-            </ul>
-            <button className="btn btn-primary mission-cta" onClick={() => navigate('/register')}>
-              Compete for Gold Tape <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Artist Showcase ──────────────────────────────────────────────── */}
-      <section className="landing-artist-showcase">
-        <div className="landing-section-inner">
-          <div className="section-label">Featured Artists</div>
-          <h2 className="landing-section-title">Artists on the Platform</h2>
-          <p className="landing-section-sub">
-            Discover music from independent artists building their fanbase right now.
-          </p>
-          <div className="artist-cards-grid">
-            {/* Album card 1 */}
-            <div className="artist-album-card" onClick={() => navigate('/login')}>
-              <div className="album-cover-wrap">
-                <img
-                  src="/50BE1900-5D33-42B5-975D-410967114B15.png"
-                  alt="MASK504 - Hold The Plug"
-                  className="album-cover-img"
-                />
-                <div className="album-play-btn"><Play size={20} fill="white" color="white" /></div>
-                <div className="album-rank-badge">#1</div>
-              </div>
-              <div className="album-card-info">
-                <div className="album-card-title">Hold The Plug</div>
-                <div className="album-card-artist">MASK504</div>
-                <div className="album-card-genre">Hip Hop · New Orleans</div>
-              </div>
-            </div>
-            {/* Album card 2 */}
-            <div className="artist-album-card" onClick={() => navigate('/login')}>
-              <div className="album-cover-wrap">
-                <img
-                  src="/6A507A63-FE01-4DD2-A50B-DB0F339AE615.jpeg"
-                  alt="MASK504 - John 3:16"
-                  className="album-cover-img"
-                />
-                <div className="album-play-btn"><Play size={20} fill="white" color="white" /></div>
-                <div className="album-rank-badge">#2</div>
-              </div>
-              <div className="album-card-info">
-                <div className="album-card-title">John 3:16</div>
-                <div className="album-card-artist">MASK504</div>
-                <div className="album-card-genre">Rap · Dark</div>
-              </div>
-            </div>
-            {/* Album card 3 */}
-            <div className="artist-album-card" onClick={() => navigate('/login')}>
-              <div className="album-cover-wrap">
-                <img
-                  src="/72A736BB-2659-41AE-8AC5-1EFDDB864A5A.png"
-                  alt="MASK504 - Holy"
-                  className="album-cover-img"
-                />
-                <div className="album-play-btn"><Play size={20} fill="white" color="white" /></div>
-                <div className="album-rank-badge">#3</div>
-              </div>
-              <div className="album-card-info">
-                <div className="album-card-title">Holy</div>
-                <div className="album-card-artist">MASK504</div>
-                <div className="album-card-genre">Hip Hop · Gospel Rap</div>
-              </div>
-            </div>
-            {/* Artist photo card */}
-            <div className="artist-profile-card" onClick={() => navigate('/login')}>
-              <div className="artist-profile-photo-wrap">
-                <img
-                  src="/A8108A3F-CC10-44C2-BEF9-0EA4F67E9F1A.jpeg"
-                  alt="MASK504 artist"
-                  className="artist-profile-photo"
-                />
-                <div className="artist-profile-overlay">
-                  <div className="artist-profile-name">MASK504</div>
-                  <div className="artist-profile-tag">🏆 Gold Tape Artist</div>
-                  <button className="artist-follow-btn">View Profile</button>
-                </div>
-              </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/register" className="btn btn-primary btn-lg">
+                Create Musician Account Free
+              </Link>
+              <button onClick={handleLaunchDemo} className="btn btn-outline btn-lg">
+                Explore Demo Band
+              </button>
             </div>
           </div>
         </div>
       </section>
-
-      {/* ─── Why BookmarkChat? ──────────────────────────────────────────────── */}
-      <section className="landing-why-bookmarkchat" style={{ padding: '100px 0 20px', textAlign: 'center' }}>
-        <div className="landing-section-inner" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div className="section-label">Why BookmarkChat?</div>
-          <h2 className="landing-section-title">Built for artists. Powered by community.</h2>
-          <p className="landing-section-sub" style={{ marginBottom: '20px', color: '#9ca3af', fontSize: '1.1rem' }}>
-            Most platforms focus on streams, likes, and followers.
-          </p>
-          <p className="landing-section-sub" style={{ marginBottom: '0', color: '#f1f0f5', fontSize: '1.15rem', maxWidth: '700px' }}>
-            BookmarkChat focuses on discovery, community, artist rankings, and recognition. Here, independent artists can upload music, build a fanbase, connect with other creators, and compete for the Gold Tape Award.
-          </p>
-        </div>
-      </section>
-
-      {/* ─── Why Join ─────────────────────────────────────────────────────── */}
-      <section className="landing-why" style={{ paddingTop: '60px' }}>
-        <div className="landing-section-inner">
-          <div className="section-label">Why Artists Choose BookmarkChat</div>
-          <h2 className="landing-section-title">Built Different. Built for You.</h2>
-          <div className="why-cards-grid">
-            {WHY_CARDS.map((card, i) => (
-              <div key={i} className="why-card" style={{ '--card-accent': card.color }}>
-                <div className="why-card-icon" style={{ background: `${card.color}18`, color: card.color }}>
-                  <card.icon size={22} />
-                </div>
-                <h3 className="why-card-title">{card.title}</h3>
-                <p className="why-card-desc">{card.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Community Section ──────────────────────────────────────────────── */}
-      <section className="landing-community" style={{ padding: '80px 0', background: 'linear-gradient(180deg, rgba(7,6,14,0), rgba(236,72,153,0.03) 50%, rgba(7,6,14,0))' }}>
-        <div className="landing-section-inner" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <div className="section-label" style={{ color: '#ec4899' }}>Community</div>
-          <h2 className="landing-section-title">Connect and Collaborate</h2>
-          <p className="landing-section-sub" style={{ maxWidth: '600px', margin: '0 auto 40px' }}>
-            Artists can connect, collaborate, and build relationships, not just upload music. BookmarkChat is a thriving network where you grow together.
-          </p>
-          <div className="community-visual" style={{ 
-            width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(236,72,153,0.1)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ec4899',
-            boxShadow: '0 0 40px rgba(236,72,153,0.15)'
-          }}>
-            <Users size={36} />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Final CTA ────────────────────────────────────────────────────── */}
-      <section className="landing-final-cta">
-        <div className="final-cta-inner">
-          <div className="final-cta-glow" />
-          <img src="/hero.png" alt="Gold Tape Award" className="final-cta-trophy" />
-          <div className="final-cta-badge">
-            <Flame size={14} color="#f97316" /> Free to Join
-          </div>
-          <h2 className="final-cta-title">Your music deserves to be heard.</h2>
-          <p className="final-cta-sub">
-            Upload today. Build your fanbase. Compete for the Gold Tape Award.
-          </p>
-          <div className="final-cta-btns">
-            <button className="final-btn btn-primary" onClick={() => navigate('/register')}>
-              <Upload size={18} /> Upload Your Music
-            </button>
-            <button className="final-btn btn-ghost" onClick={() => navigate('/login')}>
-              Already have an account? Sign In
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="landing-footer">
-        <div className="landing-footer-inner">
-          <div className="landing-logo">
-            <img src="/mainlogo2.png" alt="BookmarkChat Logo" style={{ height: '30px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <p className="footer-tagline">The home for rising independent artists.</p>
-          
-          <div className="footer-links-grid" style={{ 
-            display: 'flex', gap: '30px', margin: '20px 0', flexWrap: 'wrap', justifyContent: 'center' 
-          }}>
-            <Link to="/about" className="footer-link">About</Link>
-            <a href="mailto:Bookmarkchat.online@gmail.com" className="footer-link">Bookmarkchat.online@gmail.com</a>
-            <Link to="/privacy" className="footer-link">Privacy Policy</Link>
-            <Link to="/terms" className="footer-link">Terms</Link>
-            <a href="https://www.instagram.com/bookmarkchat.online?igsh=NTc4MTIwNjQ2YQ%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="footer-link">Instagram</a>
-            <a href="https://www.tiktok.com/@bookmarkchat.online?_r=1&_t=ZP-96vCelDNyCE" target="_blank" rel="noopener noreferrer" className="footer-link">TikTok</a>
-          </div>
-
-          <div className="footer-links">
-            <button onClick={() => navigate('/login')}>Sign In</button>
-            <button onClick={() => navigate('/register')}>Sign Up</button>
-          </div>
-          <p className="footer-copy">© {new Date().getFullYear()} BookmarkChat. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }
