@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import SongArtwork from '../components/common/SongArtwork';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -247,7 +248,7 @@ export default function Dashboard() {
           </button>
 
           <Link to="/stage-mode" className="btn btn-outline btn-sm">
-            <Tv size={16} color="#f97316" />
+            <Tv size={16} color="#3b82f6" />
             <span>Stage Mode</span>
           </Link>
 
@@ -283,7 +284,7 @@ export default function Dashboard() {
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Queue</span>
-            <div style={{ background: 'rgba(249, 115, 22, 0.15)', color: '#f97316', padding: '0.35rem', borderRadius: '8px' }}>
+            <div style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '0.35rem', borderRadius: '8px' }}>
               <Clock size={18} />
             </div>
           </div>
@@ -349,7 +350,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'live' ? 'var(--accent-orange)' : 'transparent',
+              background: activeTab === 'live' ? 'var(--accent-blue)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -364,7 +365,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'completed' ? 'var(--accent-orange)' : 'transparent',
+              background: activeTab === 'completed' ? 'var(--accent-blue)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -379,7 +380,7 @@ export default function Dashboard() {
               padding: '0.5rem 1rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: activeTab === 'all' ? 'var(--accent-orange)' : 'transparent',
+              background: activeTab === 'all' ? 'var(--accent-blue)' : 'transparent',
               color: '#fff',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -412,7 +413,7 @@ export default function Dashboard() {
         </div>
       ) : sortedRequests.length === 0 ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Radio size={40} color="#f97316" style={{ marginBottom: '1rem', opacity: 0.7 }} />
+          <Radio size={40} color="#3b82f6" style={{ marginBottom: '1rem', opacity: 0.7 }} />
           <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>No Requests in this View</h3>
           <p style={{ color: 'var(--text-muted)', maxWidth: '480px', marginInline: 'auto', marginBottom: '1.5rem' }}>
             {activeTab === 'live' 
@@ -446,7 +447,7 @@ export default function Dashboard() {
                     : isUpNext 
                     ? 'rgba(245, 158, 11, 0.5)' 
                     : req.is_pinned 
-                    ? 'rgba(249, 115, 22, 0.55)' 
+                    ? 'rgba(59, 130, 246, 0.55)' 
                     : 'var(--border-subtle)',
                   background: isPlaying 
                     ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(18, 20, 30, 0.95))' 
@@ -464,50 +465,58 @@ export default function Dashboard() {
                   gap: '1rem',
                   marginBottom: '1rem'
                 }}>
-                  {/* Song & Fan Details */}
-                  <div style={{ flex: '1 1 300px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                      {isPlaying && (
-                        <span className="badge badge-emerald">
-                          <span className="live-pulse" /> NOW PLAYING
+                  {/* Song Artwork & Fan Details */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flex: '1 1 300px' }}>
+                    <SongArtwork
+                      title={req.song_title}
+                      artist={req.song_artist}
+                      size={54}
+                      radius={10}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                        {isPlaying && (
+                          <span className="badge badge-emerald">
+                            <span className="live-pulse" /> NOW PLAYING
+                          </span>
+                        )}
+                        {isUpNext && (
+                          <span className="badge badge-amber">
+                            <Clock size={12} /> UP NEXT
+                          </span>
+                        )}
+                        {isCompleted && (
+                          <span className="badge badge-cyan">
+                            <CheckCircle size={12} /> COMPLETED
+                          </span>
+                        )}
+                        {isDeclined && (
+                          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
+                            DECLINED
+                          </span>
+                        )}
+                        {req.is_pinned && (
+                          <span className="badge badge-blue">
+                            <Pin size={12} /> PINNED
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                          {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                      )}
-                      {isUpNext && (
-                        <span className="badge badge-amber">
-                          <Clock size={12} /> UP NEXT
-                        </span>
-                      )}
-                      {isCompleted && (
-                        <span className="badge badge-cyan">
-                          <CheckCircle size={12} /> COMPLETED
-                        </span>
-                      )}
-                      {isDeclined && (
-                        <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-                          DECLINED
-                        </span>
-                      )}
-                      {req.is_pinned && (
-                        <span className="badge badge-orange">
-                          <Pin size={12} /> PINNED
-                        </span>
-                      )}
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                        {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+                      </div>
 
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>
-                      {req.song_title}
-                    </h3>
-                    {req.song_artist && (
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                        by {req.song_artist}
-                      </p>
-                    )}
+                      <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>
+                        {req.song_title}
+                      </h3>
+                      {req.song_artist && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                          by {req.song_artist}
+                        </p>
+                      )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fb923c', fontSize: '0.9rem', fontWeight: 600 }}>
-                      <Heart size={14} /> Requested by: {req.fan_name || 'Anonymous Fan'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#60a5fa', fontSize: '0.9rem', fontWeight: 600 }}>
+                        <Heart size={14} /> Requested by: {req.fan_name || 'Anonymous Fan'}
+                      </div>
                     </div>
                   </div>
 
@@ -535,7 +544,7 @@ export default function Dashboard() {
                 {req.fan_message && (
                   <div style={{
                     background: 'rgba(255, 255, 255, 0.04)',
-                    borderLeft: '3px solid #f97316',
+                    borderLeft: '3px solid #3b82f6',
                     padding: '0.75rem 1rem',
                     borderRadius: '0 8px 8px 0',
                     marginBottom: '1rem',
@@ -543,7 +552,7 @@ export default function Dashboard() {
                     alignItems: 'flex-start',
                     gap: '0.6rem'
                   }}>
-                    <MessageSquare size={16} color="#fb923c" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <MessageSquare size={16} color="#60a5fa" style={{ flexShrink: 0, marginTop: '2px' }} />
                     <p style={{ fontSize: '0.95rem', color: '#f1f5f9', fontStyle: 'italic', lineHeight: 1.5 }}>
                       "{req.fan_message}"
                     </p>
@@ -610,7 +619,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => handleTogglePin(req)}
                     className="btn btn-outline btn-sm"
-                    style={{ color: req.is_pinned ? '#f97316' : 'var(--text-dim)' }}
+                    style={{ color: req.is_pinned ? '#3b82f6' : 'var(--text-dim)' }}
                     title={req.is_pinned ? 'Unpin request' : 'Pin to top of stage list'}
                   >
                     <Pin size={14} />

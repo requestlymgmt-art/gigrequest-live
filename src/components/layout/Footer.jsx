@@ -21,18 +21,18 @@ export default function Footer() {
             width: '32px',
             height: '32px',
             borderRadius: '8px',
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            boxShadow: '0 0 12px rgba(249, 115, 22, 0.35)'
+            boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)'
           }}>
             <Radio size={16} />
           </div>
           <div>
             <strong style={{ fontSize: '1.1rem', color: '#fff' }}>
-              Request<span style={{ color: '#f97316' }}>ly</span>
+              Request<span style={{ color: '#3b82f6' }}>ly</span>
             </strong>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
               Live Song Requests & Tipping Platform for Musicians

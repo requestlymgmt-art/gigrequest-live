@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import SongArtwork from '../components/common/SongArtwork';
 import toast from 'react-hot-toast';
 
 export default function Setlist() {
@@ -323,7 +324,7 @@ export default function Setlist() {
         <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }} />
         <div>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block' }}>Average Song Price</span>
-          <strong style={{ fontSize: '1.25rem', color: '#f97316' }}>${avgPrice}</strong>
+          <strong style={{ fontSize: '1.25rem', color: '#3b82f6' }}>${avgPrice}</strong>
         </div>
       </div>
 
@@ -359,8 +360,8 @@ export default function Setlist() {
                 padding: '0.4rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
                 border: '1px solid',
-                borderColor: selectedGenre === g ? 'var(--accent-orange)' : 'var(--border-subtle)',
-                background: selectedGenre === g ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                borderColor: selectedGenre === g ? 'var(--accent-blue)' : 'var(--border-subtle)',
+                background: selectedGenre === g ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                 color: selectedGenre === g ? '#fff' : 'var(--text-muted)',
                 fontSize: '0.8rem',
                 fontWeight: 600,
@@ -382,7 +383,7 @@ export default function Setlist() {
         </div>
       ) : filteredSongs.length === 0 ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Music2 size={40} color="#f97316" style={{ marginBottom: '1rem', opacity: 0.7 }} />
+          <Music2 size={40} color="#3b82f6" style={{ marginBottom: '1rem', opacity: 0.7 }} />
           <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>No Songs Found</h3>
           <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginInline: 'auto', marginBottom: '1.5rem' }}>
             Add your songs or paste your full setlist so fans can start requesting tracks at your gig.
@@ -417,21 +418,30 @@ export default function Setlist() {
                   transition: 'background 0.15s ease'
                 }}
               >
-                {/* Song Info */}
-                <div style={{ flex: '1 1 250px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700 }}>
-                      {song.title}
-                    </h4>
-                    {song.genre && (
-                      <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                        {song.genre}
-                      </span>
-                    )}
+                {/* Song Artwork + Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 250px' }}>
+                  <SongArtwork
+                    title={song.title}
+                    artist={song.artist}
+                    imageUrl={song.image_url}
+                    size={46}
+                    radius={8}
+                  />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700 }}>
+                        {song.title}
+                      </h4>
+                      {song.genre && (
+                        <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                          {song.genre}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      {song.artist} {song.note ? `• ${song.note}` : ''}
+                    </p>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {song.artist} {song.note ? `• ${song.note}` : ''}
-                  </p>
                 </div>
 
                 {/* Price Display & Quick Edit */}
@@ -448,7 +458,7 @@ export default function Setlist() {
                           width: '75px',
                           padding: '0.35rem 0.5rem',
                           background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--accent-orange)',
+                          border: '1px solid var(--accent-blue)',
                           borderRadius: '6px',
                           color: '#fff',
                           fontWeight: 700

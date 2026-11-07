@@ -65,12 +65,12 @@ export default function Navbar() {
             width: '38px',
             height: '38px',
             borderRadius: '10px',
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            boxShadow: '0 0 16px rgba(249, 115, 22, 0.4)'
+            boxShadow: '0 0 16px rgba(59, 130, 246, 0.45)'
           }}>
             <Radio size={20} />
           </div>
@@ -83,7 +83,7 @@ export default function Navbar() {
               color: '#fff',
               lineHeight: 1.1
             }}>
-              Request<span style={{ color: '#f97316' }}>ly</span>
+              Request<span style={{ color: '#3b82f6' }}>ly</span>
             </span>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600 }}>
               LIVE STAGE TIPPING
@@ -110,12 +110,12 @@ export default function Navbar() {
                     fontSize: '0.875rem',
                     fontWeight: 600,
                     color: isActive ? '#fff' : 'var(--text-muted)',
-                    background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
-                    border: isActive ? '1px solid rgba(249, 115, 22, 0.35)' : '1px solid transparent',
+                    background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    border: isActive ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid transparent',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Icon size={16} color={isActive ? '#f97316' : 'currentColor'} />
+                  <Icon size={16} color={isActive ? '#3b82f6' : 'currentColor'} />
                   {link.name}
                 </Link>
               );
@@ -226,11 +226,11 @@ export default function Navbar() {
                   padding: '0.75rem 1rem',
                   borderRadius: 'var(--radius-md)',
                   color: isActive ? '#fff' : 'var(--text-muted)',
-                  background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                  background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                   fontWeight: 600
                 }}
               >
-                <Icon size={18} color={isActive ? '#f97316' : 'currentColor'} />
+                <Icon size={18} color={isActive ? '#3b82f6' : 'currentColor'} />
                 {link.name}
               </Link>
             );
@@ -245,7 +245,7 @@ export default function Navbar() {
               gap: '0.75rem',
               padding: '0.75rem 1rem',
               borderRadius: 'var(--radius-md)',
-              color: '#f97316',
+              color: '#3b82f6',
               fontWeight: 600
             }}
           >

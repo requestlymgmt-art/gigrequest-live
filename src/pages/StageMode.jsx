@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import SongArtwork from '../components/common/SongArtwork';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -176,33 +177,43 @@ export default function StageMode() {
 
             {currentPlaying ? (
               <>
-                <h2 style={{
-                  fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                  fontWeight: 900,
-                  lineHeight: 1.05,
-                  color: '#fff',
-                  marginBottom: '0.5rem',
-                  letterSpacing: '-0.02em'
-                }}>
-                  {currentPlaying.song_title}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                  <SongArtwork
+                    title={currentPlaying.song_title}
+                    artist={currentPlaying.song_artist}
+                    size={110}
+                    radius={18}
+                  />
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <h2 style={{
+                      fontSize: 'clamp(2.2rem, 5vw, 3.8rem)',
+                      fontWeight: 900,
+                      lineHeight: 1.05,
+                      color: '#fff',
+                      marginBottom: '0.4rem',
+                      letterSpacing: '-0.02em'
+                    }}>
+                      {currentPlaying.song_title}
+                    </h2>
 
-                {currentPlaying.song_artist && (
-                  <p style={{ fontSize: '1.5rem', color: '#94a3b8', fontWeight: 600, marginBottom: '2rem' }}>
-                    by {currentPlaying.song_artist}
-                  </p>
-                )}
+                    {currentPlaying.song_artist && (
+                      <p style={{ fontSize: '1.4rem', color: '#94a3b8', fontWeight: 600 }}>
+                        by {currentPlaying.song_artist}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 {/* Fan Shoutout Banner in Huge Text */}
                 {currentPlaying.fan_message && (
                   <div style={{
-                    background: 'rgba(249, 115, 22, 0.18)',
-                    border: '2px solid rgba(249, 115, 22, 0.5)',
+                    background: 'rgba(59, 130, 246, 0.18)',
+                    border: '2px solid rgba(59, 130, 246, 0.5)',
                     padding: '1.5rem',
                     borderRadius: '16px',
                     marginBottom: '2rem'
                   }}>
-                    <div style={{ fontSize: '1.1rem', color: '#fb923c', fontWeight: 800, marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '1.1rem', color: '#60a5fa', fontWeight: 800, marginBottom: '0.4rem' }}>
                       📢 DEDICATION FROM: {currentPlaying.fan_name || 'Fan'}
                     </div>
                     <div style={{ fontSize: '1.5rem', color: '#f8fafc', fontWeight: 700, fontStyle: 'italic', lineHeight: 1.4 }}>
@@ -301,32 +312,40 @@ export default function StageMode() {
                     gap: '1rem'
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                      <span style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        color: '#fff',
-                        fontWeight: 800,
-                        fontSize: '0.8rem',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '6px'
-                      }}>
-                        #{idx + 1}
-                      </span>
-                      <strong style={{ fontSize: '1.25rem', color: '#fff' }}>
-                        {req.song_title}
-                      </strong>
-                    </div>
-
-                    <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                      {req.song_artist} • Fan: {req.fan_name}
-                    </div>
-
-                    {req.fan_message && (
-                      <div style={{ fontSize: '0.85rem', color: '#c084fc', fontStyle: 'italic', marginTop: '0.35rem' }}>
-                        "{req.fan_message}"
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                    <SongArtwork
+                      title={req.song_title}
+                      artist={req.song_artist}
+                      size={48}
+                      radius={10}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                        <span style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: '#fff',
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '6px'
+                        }}>
+                          #{idx + 1}
+                        </span>
+                        <strong style={{ fontSize: '1.25rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {req.song_title}
+                        </strong>
                       </div>
-                    )}
+
+                      <div style={{ color: '#94a3b8', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {req.song_artist} • Fan: {req.fan_name}
+                      </div>
+
+                      {req.fan_message && (
+                        <div style={{ fontSize: '0.85rem', color: '#60a5fa', fontStyle: 'italic', marginTop: '0.35rem' }}>
+                          "{req.fan_message}"
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>

@@ -89,19 +89,19 @@ export default function QRCodeHub() {
         justifyContent: 'space-between',
         gap: '1rem',
         marginBottom: '2.5rem',
-        background: 'rgba(249, 115, 22, 0.08)',
-        borderColor: 'rgba(249, 115, 22, 0.35)'
+        background: 'rgba(59, 130, 246, 0.08)',
+        borderColor: 'rgba(59, 130, 246, 0.35)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            background: 'rgba(249, 115, 22, 0.18)',
+            background: 'rgba(59, 130, 246, 0.18)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#f97316'
+            color: '#3b82f6'
           }}>
             <Share2 size={20} />
           </div>

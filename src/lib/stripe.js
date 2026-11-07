@@ -1,33 +1,57 @@
 // src/lib/stripe.js
-// Handles transparent fee calculations where the fan pays the Stripe fee so the artist gets 100%
+// Handles transparent fee calculations where the fan pays the Requestly fee & Stripe fee
+// so the artist receives 100% of the song price and tip.
 
 export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
-  const subtotal = Math.max(0, Number(baseAmount) + Number(tipAmount));
-  
-  // Standard card processing fee: 2.9% + $0.30
-  // Formula to ensure artist receives 100% of subtotal:
-  // total = (subtotal + 0.30) / (1 - 0.029)
+  const base = Math.max(0, Number(baseAmount) || 0);
+  const tip = Math.max(0, Number(tipAmount) || 0);
+  const artistNet = base + tip; // Band keeps 100% of song price and tip!
+
+  // Requestly Platform Fee:
+  // $2 for $0-$20 Request, or 10% of $20+
+  // If base === 0 (e.g. direct musician tip modal), platform fee is 0 so musicians receive full tip.
+  let requestlyFee = 0;
+  if (base > 0) {
+    if (base <= 20) {
+      requestlyFee = 2.00;
+    } else {
+      requestlyFee = Math.round((base * 0.10) * 100) / 100;
+    }
+  }
+
+  const subtotalWithPlatform = artistNet + requestlyFee;
+
+  // Stripe processing fee: 2.9% + $0.30
+  // Formula ensuring artist receives 100% of subtotal and Requestly receives full platform fee:
+  // totalCharged = (subtotalWithPlatform + 0.30) / (1 - 0.029)
   const STRIPE_PERCENT = 0.029;
   const STRIPE_FIXED = 0.30;
-  
-  let totalCharged = subtotal > 0 ? (subtotal + STRIPE_FIXED) / (1 - STRIPE_PERCENT) : 0;
+
+  let totalCharged = subtotalWithPlatform > 0
+    ? (subtotalWithPlatform + STRIPE_FIXED) / (1 - STRIPE_PERCENT)
+    : 0;
   totalCharged = Math.round(totalCharged * 100) / 100;
-  
-  const fanFee = Math.max(0, Math.round((totalCharged - subtotal) * 100) / 100);
-  
+
+  const stripeFee = Math.max(0, Math.round((totalCharged - subtotalWithPlatform) * 100) / 100);
+  const fanFee = Math.max(0, Math.round((requestlyFee + stripeFee) * 100) / 100);
+
   return {
-    subtotal: Number(subtotal.toFixed(2)),
-    baseAmount: Number(Number(baseAmount).toFixed(2)),
-    tipAmount: Number(Number(tipAmount).toFixed(2)),
-    fanFee: Number(fanFee.toFixed(2)),
+    subtotal: Number(artistNet.toFixed(2)),
+    baseAmount: Number(base.toFixed(2)),
+    tipAmount: Number(tip.toFixed(2)),
+    requestlyFee: Number(requestlyFee.toFixed(2)),
+    stripeFee: Number(stripeFee.toFixed(2)),
+    fanFee: Number(fanFee.toFixed(2)), // Combined transparent fan fee (Requestly + Stripe)
     totalCharged: Number(totalCharged.toFixed(2)),
-    artistNet: Number(subtotal.toFixed(2)), // Band keeps 100% of song price and tip!
+    artistNet: Number(artistNet.toFixed(2)), // Band keeps 100% of song price and tip!
   };
 }
 
 export async function processStripePayment({
   amount,
   fanFee,
+  requestlyFee = 0,
+  stripeFee = 0,
   totalCharged,
   bandId,
   songTitle,
@@ -37,15 +61,17 @@ export async function processStripePayment({
 }) {
   // Simulate Stripe payment processing latency with instant confirmation
   // In production, this can invoke a Stripe Checkout Session or PaymentIntent endpoint
-  await new Promise((resolve) => setTimeout(resolve, 1400));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+
   const paymentIntentId = `pi_${Math.random().toString(36).substring(2, 12)}_${Date.now()}`;
-  
+
   return {
     success: true,
     paymentIntentId,
     amount,
     fanFee,
+    requestlyFee,
+    stripeFee,
     totalCharged,
     status: 'paid',
   };

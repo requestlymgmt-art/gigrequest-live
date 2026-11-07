@@ -109,7 +109,7 @@ export default function ProfileSettings() {
         {/* Band Identity Card */}
         <div className="glass-card">
           <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Music size={18} color="#f97316" />
+            <Music size={18} color="#3b82f6" />
             <span>Band Identity</span>
           </h3>
 

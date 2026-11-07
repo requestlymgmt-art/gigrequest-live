@@ -42,7 +42,7 @@ export default function Landing() {
         <div className="container" style={{ maxWidth: '900px' }}>
           {/* Badge */}
           <div style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
-            <span className="badge badge-orange" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+            <span className="badge badge-blue" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
               <Sparkles size={14} /> The Live Song-Request & Tipping Platform
             </span>
           </div>
@@ -56,7 +56,7 @@ export default function Landing() {
           }}>
             Turn Gig Audiences into <br />
             <span style={{
-              background: 'linear-gradient(135deg, #fb923c, #ea580c)',
+              background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
@@ -136,7 +136,7 @@ export default function Landing() {
           <div className="glass-card" style={{
             padding: '3rem 2rem',
             background: 'linear-gradient(180deg, rgba(23, 26, 38, 0.85) 0%, rgba(15, 17, 26, 0.98) 100%)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
             position: 'relative',
             overflow: 'hidden'
@@ -187,11 +187,11 @@ export default function Landing() {
                       width: '36px',
                       height: '36px',
                       borderRadius: '8px',
-                      background: 'rgba(249, 115, 22, 0.15)',
+                      background: 'rgba(59, 130, 246, 0.15)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#f97316',
+                      color: '#3b82f6',
                       flexShrink: 0
                     }}>
                       <Music size={20} />
@@ -266,12 +266,12 @@ export default function Landing() {
                 {/* Fan message */}
                 <div style={{
                   background: 'rgba(255, 255, 255, 0.04)',
-                  borderLeft: '3px solid #f97316',
+                  borderLeft: '3px solid #3b82f6',
                   padding: '1rem',
                   borderRadius: '0 8px 8px 0',
                   marginBottom: '1.25rem'
                 }}>
-                  <div style={{ fontSize: '0.8rem', color: '#fb923c', fontWeight: 700, marginBottom: '0.2rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: 700, marginBottom: '0.2rem' }}>
                     Dave & Sarah (Table 7) says:
                   </div>
                   <div style={{ fontSize: '0.95rem', color: '#e2e8f0', fontStyle: 'italic' }}>
@@ -325,7 +325,7 @@ export default function Landing() {
               <div style={{
                 fontSize: '2rem',
                 fontWeight: 900,
-                color: 'rgba(249, 115, 22, 0.4)',
+                color: 'rgba(59, 130, 246, 0.4)',
                 marginBottom: '0.5rem'
               }}>
                 01
@@ -373,8 +373,8 @@ export default function Landing() {
       <section style={{ padding: '3rem 0' }}>
         <div className="container">
           <div style={{
-            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1))',
-            border: '1px solid rgba(249, 115, 22, 0.4)',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
             borderRadius: 'var(--radius-xl)',
             padding: '3.5rem 2rem',
             textAlign: 'center',

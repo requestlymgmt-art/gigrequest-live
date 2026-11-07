@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID, DEMO_BAND_SLUG } from '../lib/supabase';
 import { calculateFeeBreakdown, processStripePayment } from '../lib/stripe';
+import SongArtwork from '../components/common/SongArtwork';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -168,10 +169,12 @@ export default function FanLivePage() {
 
     setProcessingPayment(true);
     try {
-      // 1. Process Stripe
+      // 1. Process Stripe with transparent breakdown
       const paymentResult = await processStripePayment({
         amount: breakdown.subtotal,
         fanFee: breakdown.fanFee,
+        requestlyFee: breakdown.requestlyFee,
+        stripeFee: breakdown.stripeFee,
         totalCharged: breakdown.totalCharged,
         bandId: band.id,
         songTitle,
@@ -233,6 +236,8 @@ export default function FanLivePage() {
       const paymentResult = await processStripePayment({
         amount: tipVal,
         fanFee: directBreakdown.fanFee,
+        requestlyFee: directBreakdown.requestlyFee,
+        stripeFee: directBreakdown.stripeFee,
         totalCharged: directBreakdown.totalCharged,
         bandId: band.id,
         songTitle: 'Direct Musician Tip 💖',
@@ -311,7 +316,7 @@ export default function FanLivePage() {
         marginBottom: '1.25rem',
         textAlign: 'center',
         background: 'linear-gradient(180deg, rgba(23, 26, 38, 0.85) 0%, rgba(15, 17, 26, 0.98) 100%)',
-        borderColor: 'rgba(249, 115, 22, 0.35)',
+        borderColor: 'rgba(59, 130, 246, 0.35)',
         boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
         position: 'relative'
       }}>
@@ -322,9 +327,9 @@ export default function FanLivePage() {
           borderRadius: '50%',
           margin: '0 auto 1rem',
           overflow: 'hidden',
-          border: '3px solid #f97316',
-          boxShadow: '0 0 20px rgba(249, 115, 22, 0.4)',
-          background: '#1a1008',
+          border: '3px solid #3b82f6',
+          boxShadow: '0 0 20px rgba(59, 130, 246, 0.45)',
+          background: '#0f172a',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
@@ -332,7 +337,7 @@ export default function FanLivePage() {
           {band.avatar_url ? (
             <img src={band.avatar_url} alt={band.band_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <Music size={40} color="#fb923c" />
+            <Music size={40} color="#60a5fa" />
           )}
         </div>
 
@@ -354,7 +359,7 @@ export default function FanLivePage() {
         </h1>
 
         {band.genre && (
-          <p style={{ fontSize: '0.875rem', color: '#fb923c', fontWeight: 600, marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.875rem', color: '#60a5fa', fontWeight: 600, marginBottom: '0.75rem' }}>
             {band.genre}
           </p>
         )}
@@ -368,8 +373,8 @@ export default function FanLivePage() {
         {/* Announcement Banner */}
         {band.announcement_banner && (
           <div style={{
-            background: 'rgba(249, 115, 22, 0.12)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            background: 'rgba(59, 130, 246, 0.12)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
             borderRadius: 'var(--radius-md)',
             padding: '0.65rem 0.85rem',
             fontSize: '0.85rem',
@@ -458,8 +463,8 @@ export default function FanLivePage() {
                   padding: '0.35rem 0.75rem',
                   borderRadius: 'var(--radius-full)',
                   border: '1px solid',
-                  borderColor: selectedGenre === g ? 'var(--accent-orange)' : 'var(--border-subtle)',
-                  background: selectedGenre === g ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                  borderColor: selectedGenre === g ? 'var(--accent-blue)' : 'var(--border-subtle)',
+                  background: selectedGenre === g ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                   color: selectedGenre === g ? '#fff' : 'var(--text-muted)',
                   fontSize: '0.75rem',
                   fontWeight: 600,
@@ -498,27 +503,51 @@ export default function FanLivePage() {
                 onClick={() => isAcceptingRequests && handleOpenSongModal(song)}
                 className="glass-card"
                 style={{
-                  padding: '0.9rem 1.15rem',
+                  padding: '0.75rem 1rem',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '0.75rem',
+                  gap: '0.85rem',
                   cursor: isAcceptingRequests ? 'pointer' : 'not-allowed',
                   opacity: isAcceptingRequests ? 1 : 0.6,
+                  transition: 'transform 0.15s ease, border-color 0.15s ease',
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700, marginBottom: '0.15rem' }}>
-                    {song.title}
-                  </h4>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {song.artist} {song.genre ? `• ${song.genre}` : ''}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
+                  <SongArtwork
+                    title={song.title}
+                    artist={song.artist}
+                    imageUrl={song.image_url}
+                    size={48}
+                    radius={10}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 style={{
+                      fontSize: '1.02rem',
+                      color: '#fff',
+                      fontWeight: 700,
+                      marginBottom: '0.15rem',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {song.title}
+                    </h4>
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {song.artist} {song.genre ? `• ${song.genre}` : ''}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
                   <span style={{
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
                     fontWeight: 800,
                     color: '#34d399',
                     background: 'rgba(16, 185, 129, 0.12)',
@@ -547,19 +576,19 @@ export default function FanLivePage() {
           style={{
             padding: '1.25rem',
             textAlign: 'center',
-            border: '1px dashed var(--accent-orange)',
-            background: 'rgba(249, 115, 22, 0.05)',
+            border: '1px dashed var(--accent-blue)',
+            background: 'rgba(59, 130, 246, 0.05)',
             cursor: 'pointer'
           }}
         >
-          <Sparkles size={20} color="#fb923c" style={{ marginBottom: '0.35rem' }} />
+          <Sparkles size={20} color="#60a5fa" style={{ marginBottom: '0.35rem' }} />
           <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '0.2rem' }}>
             Can't find your song in the list?
           </h4>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
             Request any custom song for the band to play or jam!
           </p>
-          <span className="badge badge-orange">
+          <span className="badge badge-blue">
             Custom Request • ${(Number(band.custom_request_price) || 15).toFixed(2)}
           </span>
         </div>
@@ -569,19 +598,30 @@ export default function FanLivePage() {
       {(selectedSong || isCustomRequest) && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <span className="badge badge-orange" style={{ marginBottom: '0.35rem' }}>
-                  {isCustomRequest ? 'CUSTOM SONG REQUEST' : 'SONG REQUEST'}
-                </span>
-                <h3 style={{ fontSize: '1.4rem' }}>
-                  {isCustomRequest ? 'Request Any Song' : selectedSong.title}
-                </h3>
-                {!isCustomRequest && selectedSong.artist && (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    by {selectedSong.artist}
-                  </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
+                {!isCustomRequest && (
+                  <SongArtwork
+                    title={selectedSong.title}
+                    artist={selectedSong.artist}
+                    imageUrl={selectedSong.image_url}
+                    size={56}
+                    radius={12}
+                  />
                 )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span className="badge badge-blue" style={{ marginBottom: '0.35rem' }}>
+                    {isCustomRequest ? 'CUSTOM SONG REQUEST' : 'SONG REQUEST'}
+                  </span>
+                  <h3 style={{ fontSize: '1.35rem', lineHeight: 1.2, wordBreak: 'break-word' }}>
+                    {isCustomRequest ? 'Request Any Song' : selectedSong.title}
+                  </h3>
+                  {!isCustomRequest && selectedSong.artist && (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                      by {selectedSong.artist}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => { setSelectedSong(null); setIsCustomRequest(false); }}
@@ -631,8 +671,8 @@ export default function FanLivePage() {
                         padding: '0.55rem',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid',
-                        borderColor: (!customTipInput && tipBoost === amount) ? 'var(--accent-orange)' : 'var(--border-subtle)',
-                        background: (!customTipInput && tipBoost === amount) ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                        borderColor: (!customTipInput && tipBoost === amount) ? 'var(--accent-blue)' : 'var(--border-subtle)',
+                        background: (!customTipInput && tipBoost === amount) ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.03)',
                         color: '#fff',
                         fontWeight: 700,
                         fontSize: '0.85rem',
@@ -679,9 +719,9 @@ export default function FanLivePage() {
                 />
               </div>
 
-              {/* Transparent Fee Breakdown (As required by client!) */}
+              {/* Transparent Fee Breakdown with Requestly Fee & Stripe Fee */}
               <div style={{
-                background: 'rgba(0, 0, 0, 0.4)',
+                background: 'rgba(0, 0, 0, 0.45)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
                 padding: '1rem',
@@ -689,26 +729,34 @@ export default function FanLivePage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
                   <span>Song Request:</span>
-                  <span style={{ color: '#fff' }}>${breakdown.baseAmount.toFixed(2)}</span>
+                  <span style={{ color: '#fff', fontWeight: 600 }}>${breakdown.baseAmount.toFixed(2)}</span>
                 </div>
                 {breakdown.tipAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
                     <span>Extra Musician Tip:</span>
-                    <span style={{ color: '#10b981' }}>+${breakdown.tipAmount.toFixed(2)}</span>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>+${breakdown.tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {breakdown.requestlyFee > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      Requestly Platform Fee ({breakdown.baseAmount <= 20 ? '$2 flat' : '10%'}):
+                    </span>
+                    <span style={{ color: '#60a5fa', fontWeight: 600 }}>+${breakdown.requestlyFee.toFixed(2)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    Stripe Processing Fee (Fan Paid):
+                    Stripe Card Processing:
                   </span>
-                  <span style={{ color: 'var(--text-dim)' }}>+${breakdown.fanFee.toFixed(2)}</span>
+                  <span style={{ color: 'var(--text-dim)' }}>+${breakdown.stripeFee.toFixed(2)}</span>
                 </div>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                   paddingTop: '0.5rem',
-                  fontSize: '1.1rem',
+                  fontSize: '1.15rem',
                   fontWeight: 800,
                   color: '#fff'
                 }}>
@@ -725,7 +773,7 @@ export default function FanLivePage() {
                   gap: '0.35rem'
                 }}>
                   <ShieldCheck size={14} color="#10b981" />
-                  <span>100% of song & tip goes to the musicians. Fan covers processing fee.</span>
+                  <span>100% of song & tip goes to musicians. Fan covers transparent fees.</span>
                 </div>
               </div>
 

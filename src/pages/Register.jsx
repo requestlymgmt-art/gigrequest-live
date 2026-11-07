@@ -60,13 +60,13 @@ export default function Register() {
             width: '48px',
             height: '48px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
             marginBottom: '1rem',
-            boxShadow: '0 0 20px rgba(249, 115, 22, 0.4)'
+            boxShadow: '0 0 20px rgba(59, 130, 246, 0.45)'
           }}>
             <Radio size={24} />
           </div>
@@ -145,7 +145,7 @@ export default function Register() {
 
         <div style={{ textAlign: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem', marginTop: '1rem' }}>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-            Already have an account? <Link to="/login" style={{ color: '#f97316', fontWeight: 600 }}>Sign In</Link>
+            Already have an account? <Link to="/login" style={{ color: '#3b82f6', fontWeight: 600 }}>Sign In</Link>
           </p>
 
           <button

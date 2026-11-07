@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Requestly Design System - Warm Stage Orange & Authentic Live Music Vibe
+   Requestly Design System - Electric Blue Live Music & Stage Tipping Vibe
    ========================================================================== */
 
 :root {
@@ -9,14 +9,21 @@
   --bg-card: rgba(23, 26, 38, 0.75);
   --bg-card-hover: rgba(30, 34, 49, 0.95);
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(249, 115, 22, 0.45);
+  --border-active: rgba(59, 130, 246, 0.45);
   --border-gold: rgba(245, 158, 11, 0.45);
 
-  /* Primary Brand: Punchy Stage Orange */
-  --accent-orange: #f97316;
-  --accent-orange-deep: #ea580c;
-  --accent-orange-dark: #c2410c;
-  --accent-orange-glow: rgba(249, 115, 22, 0.35);
+  /* Primary Brand Accent: Vibrant Electric Blue */
+  --accent-blue: #3b82f6;
+  --accent-blue-deep: #2563eb;
+  --accent-blue-dark: #1d4ed8;
+  --accent-blue-light: #60a5fa;
+  --accent-blue-glow: rgba(59, 130, 246, 0.38);
+
+  /* Legacy alias mappings to ensure complete consistency */
+  --accent-orange: #3b82f6;
+  --accent-orange-deep: #2563eb;
+  --accent-orange-dark: #1d4ed8;
+  --accent-orange-glow: rgba(59, 130, 246, 0.38);
 
   /* Secondary: Live Emerald Green for Money & Live Status */
   --accent-emerald: #10b981;
@@ -46,7 +53,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.65);
-  --shadow-glow: 0 0 25px var(--accent-orange-glow);
+  --shadow-glow: 0 0 25px var(--accent-blue-glow);
 }
 
 * {
@@ -64,7 +71,7 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Warm Ambient Atmosphere */
+/* Blue Ambient Atmosphere */
 body::before {
   content: '';
   position: fixed;
@@ -72,7 +79,7 @@ body::before {
   left: 25%;
   width: 550px;
   height: 550px;
-  background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -84,7 +91,7 @@ body::after {
   right: 15%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(234, 88, 12, 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -143,17 +150,17 @@ a {
   transform: translateY(0);
 }
 
-/* Primary Warm Orange */
+/* Primary Vibrant Blue */
 .btn-primary {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #fff;
-  box-shadow: 0 4px 16px var(--accent-orange-glow);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px var(--accent-blue-glow);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  box-shadow: 0 6px 22px rgba(249, 115, 22, 0.5);
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  box-shadow: 0 6px 22px rgba(59, 130, 246, 0.5);
 }
 
 .btn-emerald {
@@ -254,8 +261,8 @@ a {
 }
 
 .input-field:focus {
-  border-color: var(--accent-orange);
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .label {
@@ -311,10 +318,11 @@ a {
   border-radius: var(--radius-full);
 }
 
+.badge-blue,
 .badge-orange {
-  background: rgba(249, 115, 22, 0.15);
-  color: #fb923c;
-  border: 1px solid rgba(249, 115, 22, 0.35);
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
 }
 
 .badge-emerald {

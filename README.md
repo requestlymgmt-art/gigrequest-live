@@ -3,7 +3,7 @@
 A modern, web-based song-request and tipping platform for live musicians, bands, solo acts, DJs, and venue performers.
 
 Fans scan a QR code at your gig, browse your setlist, and pay to request songs via Stripe.
-**100% of the song price and tips go directly to the artist** — the Stripe card processing fee is transparently charged to the fan at checkout!
+**100% of the song price and tips go directly to the artist** — Requestly platform fees ($2 for $0-$20 requests or 10% for $20+) and Stripe card processing fees are transparently covered by the fan at checkout!
 
 ---
 
