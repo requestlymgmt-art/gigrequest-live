@@ -7,19 +7,22 @@ export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
   const tip = Math.max(0, Number(tipAmount) || 0);
   const artistNet = base + tip; // Band keeps 100% of song price and tip!
 
+  // Total request value (song price + tip)
+  const totalRequest = artistNet;
+
   // Requestly Platform Fee:
   // $2 for $0-$20 Request, or 10% of $20+
-  // If base === 0 (e.g. direct musician tip modal), platform fee is 0 so musicians receive full tip.
+  // Evaluated on total request amount so adding tips or custom requests properly triggers 10% when > $20.
   let requestlyFee = 0;
-  if (base > 0) {
-    if (base <= 20) {
+  if (totalRequest > 0) {
+    if (totalRequest <= 20) {
       requestlyFee = 2.00;
     } else {
-      requestlyFee = Math.round((base * 0.10) * 100) / 100;
+      requestlyFee = Math.round((totalRequest * 0.10) * 100) / 100;
     }
   }
 
-  const subtotalWithPlatform = artistNet + requestlyFee;
+  const subtotalWithPlatform = totalRequest + requestlyFee;
 
   // Stripe processing fee: 2.9% + $0.30
   // Formula ensuring artist receives 100% of subtotal and Requestly receives full platform fee:
@@ -36,7 +39,7 @@ export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
   const fanFee = Math.max(0, Math.round((requestlyFee + stripeFee) * 100) / 100);
 
   return {
-    subtotal: Number(artistNet.toFixed(2)),
+    subtotal: Number(totalRequest.toFixed(2)),
     baseAmount: Number(base.toFixed(2)),
     tipAmount: Number(tip.toFixed(2)),
     requestlyFee: Number(requestlyFee.toFixed(2)),
@@ -44,6 +47,7 @@ export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
     fanFee: Number(fanFee.toFixed(2)), // Combined transparent fan fee (Requestly + Stripe)
     totalCharged: Number(totalCharged.toFixed(2)),
     artistNet: Number(artistNet.toFixed(2)), // Band keeps 100% of song price and tip!
+    isPercentFee: totalRequest > 20,
   };
 }
 

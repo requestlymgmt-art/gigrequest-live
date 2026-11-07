@@ -740,7 +740,7 @@ export default function FanLivePage() {
                 {breakdown.requestlyFee > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      Requestly Platform Fee ({breakdown.baseAmount <= 20 ? '$2 flat' : '10%'}):
+                      Requestly Platform Fee ({breakdown.subtotal > 20 ? '10%' : '$2 flat'}):
                     </span>
                     <span style={{ color: '#60a5fa', fontWeight: 600 }}>+${breakdown.requestlyFee.toFixed(2)}</span>
                   </div>
@@ -844,90 +844,132 @@ export default function FanLivePage() {
       )}
 
       {/* DIRECT TIP MODAL */}
-      {showDirectTipModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <span className="badge badge-amber" style={{ marginBottom: '0.35rem' }}>
-                  DIRECT MUSICIAN TIP
-                </span>
-                <h3 style={{ fontSize: '1.4rem' }}>Tip {band.band_name}</h3>
-              </div>
-              <button onClick={() => setShowDirectTipModal(false)} className="btn btn-outline btn-sm">
-                <X size={16} />
-              </button>
-            </div>
+      {showDirectTipModal && (() => {
+        const liveTipVal = Math.max(1, parseFloat(directTipAmount) || 5);
+        const liveBreakdown = calculateFeeBreakdown(0, liveTipVal);
 
-            <form onSubmit={handlePayDirectTip}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label className="label">Choose Tip Amount ($)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  {[5, 10, 20, 50].map((val) => (
-                    <button
-                      type="button"
-                      key={val}
-                      onClick={() => setDirectTipAmount(val)}
-                      style={{
-                        padding: '0.65rem',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid',
-                        borderColor: directTipAmount === val ? '#f59e0b' : 'var(--border-subtle)',
-                        background: directTipAmount === val ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                        color: '#fff',
-                        fontWeight: 800,
-                        fontSize: '1rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ${val}
-                    </button>
-                  ))}
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                  <span className="badge badge-amber" style={{ marginBottom: '0.35rem' }}>
+                    DIRECT MUSICIAN TIP
+                  </span>
+                  <h3 style={{ fontSize: '1.4rem' }}>Tip {band.band_name}</h3>
                 </div>
-                <input
-                  type="number"
-                  placeholder="Or enter custom amount..."
-                  value={directTipAmount}
-                  onChange={(e) => setDirectTipAmount(e.target.value)}
-                  className="input-field"
-                  min="1"
-                />
+                <button onClick={() => setShowDirectTipModal(false)} className="btn btn-outline btn-sm">
+                  <X size={16} />
+                </button>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="label">Your Name (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="Generous Fan"
-                  value={fanName}
-                  onChange={(e) => setFanName(e.target.value)}
-                  className="input-field"
-                />
-              </div>
+              <form onSubmit={handlePayDirectTip}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label className="label">Choose Tip Amount ($)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    {[5, 10, 20, 50].map((val) => (
+                      <button
+                        type="button"
+                        key={val}
+                        onClick={() => setDirectTipAmount(val)}
+                        style={{
+                          padding: '0.65rem',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid',
+                          borderColor: directTipAmount === val ? '#f59e0b' : 'var(--border-subtle)',
+                          background: directTipAmount === val ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                          color: '#fff',
+                          fontWeight: 800,
+                          fontSize: '1rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ${val}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    placeholder="Or enter custom amount..."
+                    value={directTipAmount}
+                    onChange={(e) => setDirectTipAmount(e.target.value)}
+                    className="input-field"
+                    min="1"
+                  />
+                </div>
 
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label className="label">Message to the Band (Optional)</label>
-                <textarea
-                  rows={2}
-                  placeholder="You guys rock!"
-                  value={fanMessage}
-                  onChange={(e) => setFanMessage(e.target.value)}
-                  className="input-field"
-                />
-              </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label className="label">Your Name (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Generous Fan"
+                    value={fanName}
+                    onChange={(e) => setFanName(e.target.value)}
+                    className="input-field"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={processingPayment}
-                className="btn btn-amber btn-lg"
-                style={{ width: '100%', fontSize: '1.05rem', fontWeight: 800 }}
-              >
-                {processingPayment ? 'Processing with Stripe...' : `Tip $${directTipAmount} to Band`}
-              </button>
-            </form>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label className="label">Message to the Band (Optional)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="You guys rock!"
+                    value={fanMessage}
+                    onChange={(e) => setFanMessage(e.target.value)}
+                    className="input-field"
+                    style={{ resize: 'none' }}
+                  />
+                </div>
+
+                {/* Transparent Fee Breakdown */}
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.45)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                    <span>Musician Tip:</span>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>${liveBreakdown.tipAmount.toFixed(2)}</span>
+                  </div>
+                  {liveBreakdown.requestlyFee > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                      <span>Requestly Platform Fee ({liveBreakdown.subtotal > 20 ? '10%' : '$2 flat'}):</span>
+                      <span style={{ color: '#60a5fa', fontWeight: 600 }}>+${liveBreakdown.requestlyFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                    <span>Stripe Card Processing:</span>
+                    <span style={{ color: 'var(--text-dim)' }}>+${liveBreakdown.stripeFee.toFixed(2)}</span>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    paddingTop: '0.5rem',
+                    fontSize: '1.1rem',
+                    fontWeight: 800,
+                    color: '#fff'
+                  }}>
+                    <span>Total Charged:</span>
+                    <span style={{ color: '#34d399' }}>${liveBreakdown.totalCharged.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={processingPayment}
+                  className="btn btn-amber btn-lg"
+                  style={{ width: '100%', fontSize: '1.05rem', fontWeight: 800 }}
+                >
+                  {processingPayment ? 'Processing with Stripe...' : `Pay $${liveBreakdown.totalCharged.toFixed(2)} & Tip Band`}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
