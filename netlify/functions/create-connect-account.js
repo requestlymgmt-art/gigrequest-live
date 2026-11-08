@@ -1,19 +1,12 @@
 // netlify/functions/create-connect-account.js
 // Generates a Stripe Express Connect onboarding link for bands to link their bank accounts
+import Stripe from 'stripe';
 
-let stripe = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  try {
-    const Stripe = require('stripe');
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-    });
-  } catch (err) {
-    console.error('Failed to initialize Stripe SDK:', err);
-  }
-}
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' })
+  : null;
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -95,4 +88,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
