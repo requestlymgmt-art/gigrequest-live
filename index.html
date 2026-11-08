@@ -8,6 +8,30 @@
     <meta name="description" content="Fans scan a QR code at your gig, pick a song from your setlist, and pay to request it via Stripe with zero fees to the artist." />
     <meta name="theme-color" content="#3b82f6" />
     
+    <!-- Suppress Netlify Preview Drawer & Powered by Netlify Bubble -->
+    <style>
+      [data-netlify-drawer], #netlify-drawer, iframe#netlify-drawer, .netlify-drawer-container, [class*="netlify-drawer"], [class*="netlify-feedback"], iframe[src*="netlify"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
+    <script>
+      (function() {
+        var removeDrawer = function() {
+          var drawers = document.querySelectorAll('[data-netlify-drawer], #netlify-drawer, iframe#netlify-drawer, .netlify-drawer-container, [class*="netlify-drawer"]');
+          drawers.forEach(function(d) { d.remove(); });
+        };
+        if (window.MutationObserver) {
+          var obs = new MutationObserver(removeDrawer);
+          obs.observe(document.documentElement, { childList: true, subtree: true });
+        }
+        window.addEventListener('DOMContentLoaded', removeDrawer);
+        window.addEventListener('load', removeDrawer);
+      })();
+    </script>
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

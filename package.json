@@ -19,7 +19,8 @@
     "react-dom": "^19.2.6",
     "react-easy-crop": "^5.5.7",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.15.1"
+    "react-router-dom": "^7.15.1",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

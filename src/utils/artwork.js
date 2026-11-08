@@ -1,24 +1,26 @@
 // src/utils/artwork.js
-// Automatic artist & song album artwork resolver with iTunes API + persistent caching
+// Automatic artist, song artwork, and genre resolver with iTunes API + persistent caching
 
 const memCache = new Map();
-const CACHE_STORAGE_KEY = 'requestly_art_cache_v2';
+const metaMemCache = new Map();
+const CACHE_STORAGE_KEY = 'requestly_art_cache_v3';
+const META_STORAGE_KEY = 'requestly_meta_cache_v3';
 
 // Load persisted cache on init
-function getPersistedCache() {
+function getPersistedCache(key = CACHE_STORAGE_KEY) {
   try {
-    const raw = localStorage.getItem(CACHE_STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : {};
   } catch (e) {
     return {};
   }
 }
 
-function saveToPersistedCache(key, url) {
+function saveToPersistedCache(storageKey, key, value) {
   try {
-    const data = getPersistedCache();
-    data[key] = url;
-    localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(data));
+    const data = getPersistedCache(storageKey);
+    data[key] = value;
+    localStorage.setItem(storageKey, JSON.stringify(data));
   } catch (e) {
     // LocalStorage quota or access exception
   }
@@ -26,12 +28,12 @@ function saveToPersistedCache(key, url) {
 
 // Clean song/artist title for high-accuracy iTunes search
 export function cleanSearchQuery(title = '', artist = '') {
-  const cleanTitle = title
+  const cleanTitle = (title || '')
     .replace(/\s*[\(\[](remastered|live|acoustic|deluxe|version|edit|cover|audio)[\)\]]/gi, '')
     .trim();
 
   // If artist includes multiple artists (e.g. "Amy Winehouse / Mark Ronson"), pick primary
-  const cleanArtist = artist
+  const cleanArtist = (artist || '')
     .split(/[\/,;&]|feat\.|ft\./i)[0]
     .replace(/\s*\(.*\)/g, '')
     .trim();
@@ -40,28 +42,23 @@ export function cleanSearchQuery(title = '', artist = '') {
 }
 
 /**
- * Resolves high-resolution album/artist artwork for a given song title & artist.
- * Returns null if not found or on network failure.
+ * Resolves full song metadata (artworkUrl, genre, albumTitle) via iTunes API.
  */
-export async function getSongArtworkUrl(title, artist, fallbackUrl = null) {
-  if (fallbackUrl) return fallbackUrl;
+export async function getSongMetadata(title, artist) {
   if (!title) return null;
 
   const cacheKey = `${(title || '').trim().toLowerCase()}___${(artist || '').trim().toLowerCase()}`;
 
-  // 1. Check in-memory cache
-  if (memCache.has(cacheKey)) {
-    return memCache.get(cacheKey);
+  if (metaMemCache.has(cacheKey)) {
+    return metaMemCache.get(cacheKey);
   }
 
-  // 2. Check localStorage cache
-  const localCache = getPersistedCache();
-  if (localCache && localCache[cacheKey]) {
-    memCache.set(cacheKey, localCache[cacheKey]);
-    return localCache[cacheKey];
+  const persisted = getPersistedCache(META_STORAGE_KEY);
+  if (persisted && persisted[cacheKey]) {
+    metaMemCache.set(cacheKey, persisted[cacheKey]);
+    return persisted[cacheKey];
   }
 
-  // 3. Query iTunes API
   const query = cleanSearchQuery(title, artist);
   if (!query) return null;
 
@@ -73,25 +70,56 @@ export async function getSongArtworkUrl(title, artist, fallbackUrl = null) {
     const data = await response.json();
     const result = data.results?.[0];
 
-    let artUrl = null;
-    if (result && result.artworkUrl100) {
-      // Upgrade 100x100 thumbnail to 300x300 high resolution artwork
-      artUrl = result.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg');
-    }
+    if (result) {
+      const artworkUrl = result.artworkUrl100
+        ? result.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg')
+        : null;
 
-    if (artUrl) {
-      memCache.set(cacheKey, artUrl);
-      saveToPersistedCache(cacheKey, artUrl);
-      return artUrl;
+      const metadata = {
+        artworkUrl,
+        genre: result.primaryGenreName || 'Pop',
+        albumTitle: result.collectionName || '',
+        artistName: result.artistName || artist,
+        trackName: result.trackName || title,
+      };
+
+      metaMemCache.set(cacheKey, metadata);
+      saveToPersistedCache(META_STORAGE_KEY, cacheKey, metadata);
+
+      if (artworkUrl) {
+        memCache.set(cacheKey, artworkUrl);
+        saveToPersistedCache(CACHE_STORAGE_KEY, cacheKey, artworkUrl);
+      }
+
+      return metadata;
     } else {
-      // Cache empty result to avoid re-querying every render
-      memCache.set(cacheKey, null);
-      saveToPersistedCache(cacheKey, null);
+      metaMemCache.set(cacheKey, null);
+      saveToPersistedCache(META_STORAGE_KEY, cacheKey, null);
       return null;
     }
   } catch (err) {
-    console.debug('Artwork lookup skipped:', err.message);
+    console.debug('Metadata lookup failed:', err.message);
     return null;
   }
 }
 
+/**
+ * Resolves high-resolution album/artist artwork for a given song title & artist.
+ * Returns null if not found or on network failure.
+ */
+export async function getSongArtworkUrl(title, artist, fallbackUrl = null) {
+  if (fallbackUrl) return fallbackUrl;
+  if (!title) return null;
+
+  const meta = await getSongMetadata(title, artist);
+  return meta?.artworkUrl || null;
+}
+
+/**
+ * Resolves the primary genre for a song title & artist.
+ */
+export async function getSongGenre(title, artist) {
+  if (!title) return 'Live Music';
+  const meta = await getSongMetadata(title, artist);
+  return meta?.genre || 'Live Music';
+}

@@ -534,8 +534,14 @@ export default function Dashboard() {
                     <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#34d399' }}>
                       +${netAmount.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>
-                      Stripe Paid ✓
+                    <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                      {req.payment_method === 'apple_pay' ? (
+                        <span> Apple Pay ✓</span>
+                      ) : req.payment_method === 'google_pay' ? (
+                        <span>G Pay ✓</span>
+                      ) : (
+                        <span>Card Paid ✓</span>
+                      )}
                     </div>
                   </div>
                 </div>

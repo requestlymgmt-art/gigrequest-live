@@ -18,6 +18,7 @@ import {
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
+import { getSongMetadata, getSongGenre } from '../utils/artwork';
 import toast from 'react-hot-toast';
 
 export default function Setlist() {
@@ -42,6 +43,31 @@ export default function Setlist() {
     price: '5.00',
     note: '',
   });
+  const [detectingGenre, setDetectingGenre] = useState(false);
+  const [autoDetectedGenre, setAutoDetectedGenre] = useState('');
+
+  // Auto-detect genre whenever title & artist blur or change
+  const triggerAutoGenre = async (title, artist) => {
+    if (!title || title.trim().length < 2) return;
+    setDetectingGenre(true);
+    try {
+      const meta = await getSongMetadata(title.trim(), artist?.trim() || '');
+      if (meta?.genre) {
+        setAutoDetectedGenre(meta.genre);
+        setFormData((prev) => {
+          // If genre is empty or generic, auto-fill it
+          if (!prev.genre || prev.genre === 'General' || prev.genre === 'Live Cover') {
+            return { ...prev, genre: meta.genre };
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      // quiet fallback
+    } finally {
+      setDetectingGenre(false);
+    }
+  };
 
   // Bulk paste text
   const [bulkText, setBulkText] = useState('');
@@ -81,11 +107,20 @@ export default function Setlist() {
 
     try {
       const priceNum = Math.max(1, parseFloat(formData.price) || 5);
+      
+      // If genre was left blank or generic, resolve it automatically via iTunes catalog
+      let resolvedGenre = formData.genre.trim();
+      if (!resolvedGenre || resolvedGenre === 'General' || resolvedGenre === 'Live Cover') {
+        const detected = await getSongGenre(formData.title.trim(), formData.artist.trim());
+        if (detected) resolvedGenre = detected;
+      }
+      if (!resolvedGenre) resolvedGenre = 'Live Music';
+
       const newSong = {
         band_id: effectiveBandId,
         title: formData.title.trim(),
         artist: formData.artist.trim() || profile?.band_name || 'Cover',
-        genre: formData.genre.trim() || 'General',
+        genre: resolvedGenre,
         price: priceNum,
         note: formData.note.trim(),
         is_active: true,
@@ -100,9 +135,10 @@ export default function Setlist() {
       if (error) throw error;
 
       setSongs((prev) => [...prev, data]);
-      toast.success(`Added "${data.title}" ($${priceNum.toFixed(2)})`);
+      toast.success(`Added "${data.title}" • ${resolvedGenre} ($${priceNum.toFixed(2)})`);
       setShowAddModal(false);
       setFormData({ title: '', artist: '', genre: '', price: '5.00', note: '' });
+      setAutoDetectedGenre('');
     } catch (err) {
       console.error('Add song error:', err);
       toast.error('Failed to add song');
@@ -226,9 +262,24 @@ export default function Setlist() {
         return;
       }
 
+      // Automatically resolve real genres for any songs with missing or default genres
+      const enrichedItems = await Promise.all(
+        newItems.map(async (item) => {
+          if (!item.genre || item.genre === 'Live Cover' || item.genre === 'General') {
+            try {
+              const detected = await getSongGenre(item.title, item.artist);
+              return { ...item, genre: detected || 'Live Music' };
+            } catch (e) {
+              return { ...item, genre: 'Live Music' };
+            }
+          }
+          return item;
+        })
+      );
+
       const { data, error } = await supabase
         .from('songs')
-        .insert(newItems)
+        .insert(enrichedItems)
         .select();
 
       if (error) throw error;
@@ -554,6 +605,7 @@ export default function Setlist() {
                   placeholder="e.g. Valerie, Tennessee Whiskey, Superstition"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onBlur={() => triggerAutoGenre(formData.title, formData.artist)}
                   className="input-field"
                   required
                 />
@@ -566,13 +618,21 @@ export default function Setlist() {
                   placeholder="e.g. Stevie Wonder, Amy Winehouse"
                   value={formData.artist}
                   onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+                  onBlur={() => triggerAutoGenre(formData.title, formData.artist)}
                   className="input-field"
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label className="label">Genre</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label className="label" style={{ marginBottom: 0 }}>Genre</label>
+                    {detectingGenre ? (
+                      <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Detecting...</span>
+                    ) : autoDetectedGenre ? (
+                      <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 600 }}>✓ Auto-detected</span>
+                    ) : null}
+                  </div>
                   <input
                     type="text"
                     placeholder="e.g. Rock, Soul, Country"
@@ -580,6 +640,11 @@ export default function Setlist() {
                     onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
                     className="input-field"
                   />
+                  {autoDetectedGenre && (
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-dim)', marginTop: '0.25rem', display: 'block' }}>
+                      Identified as <strong style={{ color: '#60a5fa' }}>{autoDetectedGenre}</strong> via Apple catalog
+                    </span>
+                  )}
                 </div>
 
                 <div>

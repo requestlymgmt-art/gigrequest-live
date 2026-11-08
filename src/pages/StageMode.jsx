@@ -228,11 +228,16 @@ export default function StageMode() {
                   gap: '1rem',
                   fontSize: '1.25rem',
                   color: '#34d399',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  flexWrap: 'wrap'
                 }}>
                   <span>Paid: +${(Number(currentPlaying.song_price) + Number(currentPlaying.tip_amount)).toFixed(2)}</span>
                   <span>•</span>
                   <span>Fan: {currentPlaying.fan_name}</span>
+                  <span>•</span>
+                  <span style={{ fontSize: '1.05rem', color: '#60a5fa' }}>
+                    {currentPlaying.payment_method === 'apple_pay' ? ' Apple Pay ✓' : currentPlaying.payment_method === 'google_pay' ? 'G Pay ✓' : 'Card Paid ✓'}
+                  </span>
                 </div>
               </>
             ) : (
@@ -348,9 +353,12 @@ export default function StageMode() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
                     <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>
                       +${(Number(req.song_price) + Number(req.tip_amount)).toFixed(2)}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700 }}>
+                      {req.payment_method === 'apple_pay' ? ' Apple Pay ✓' : req.payment_method === 'google_pay' ? 'G Pay ✓' : 'Card Paid ✓'}
                     </span>
                     <button
                       onClick={() => handleStartPlaying(req.id)}
