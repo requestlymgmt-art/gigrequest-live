@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { 
   Music, 
   Search, 
@@ -19,20 +19,42 @@ import {
   Lock
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID, DEMO_BAND_SLUG } from '../lib/supabase';
-import { calculateFeeBreakdown, processStripePayment, getAvailableWallets } from '../lib/stripe';
+import { calculateFeeBreakdown, processStripePayment, getAvailableWallets, createStripeCheckoutRedirect } from '../lib/stripe';
 import SongArtwork from '../components/common/SongArtwork';
+import SongGenreBadge from '../components/common/SongGenreBadge';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
 export default function FanLivePage() {
   const { slug } = useParams();
   const effectiveSlug = slug || DEMO_BAND_SLUG;
+  const [searchParams] = useSearchParams();
 
   const [band, setBand] = useState(null);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
+
+  // Handle Stripe real-money redirect return
+  useEffect(() => {
+    const isSuccess = searchParams.get('payment_success');
+    const songName = searchParams.get('song');
+    const isCancelled = searchParams.get('payment_cancelled');
+
+    if (isSuccess === 'true') {
+      confetti({ particleCount: 120, spread: 85, origin: { y: 0.6 } });
+      toast.success(
+        songName
+          ? `🎉 Payment Confirmed! "${decodeURIComponent(songName)}" is on the band's stage screen!`
+          : '🎉 Payment Confirmed! Your request is on the stage screen!'
+      );
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (isCancelled === 'true') {
+      toast('Payment was cancelled', { icon: 'ℹ️' });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams]);
 
   // Request modal states
   const [selectedSong, setSelectedSong] = useState(null);
@@ -558,11 +580,15 @@ export default function FanLivePage() {
                     <div style={{
                       fontSize: '0.8rem',
                       color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>
-                      {song.artist} {song.genre ? `• ${song.genre}` : ''}
+                      <span>{song.artist}</span>
+                      <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
                     </div>
                   </div>
                 </div>

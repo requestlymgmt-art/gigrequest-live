@@ -13,11 +13,16 @@ import {
   ToggleLeft, 
   ToggleRight,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Disc3,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
+import SongGenreBadge from '../components/common/SongGenreBadge';
 import { getSongMetadata, getSongGenre } from '../utils/artwork';
 import toast from 'react-hot-toast';
 
@@ -45,8 +50,48 @@ export default function Setlist() {
   });
   const [detectingGenre, setDetectingGenre] = useState(false);
   const [autoDetectedGenre, setAutoDetectedGenre] = useState('');
+  const [detectedMeta, setDetectedMeta] = useState(null);
+  const [enrichingAllGenres, setEnrichingAllGenres] = useState(false);
 
-  // Auto-detect genre whenever title & artist blur or change
+  // Debounced live catalog search while typing title or artist in modal
+  useEffect(() => {
+    if (!showAddModal || !formData.title || formData.title.trim().length < 2) {
+      setDetectedMeta(null);
+      setAutoDetectedGenre('');
+      return;
+    }
+
+    let isCurrent = true;
+    const timer = setTimeout(async () => {
+      setDetectingGenre(true);
+      try {
+        const meta = await getSongMetadata(formData.title.trim(), formData.artist?.trim() || '');
+        if (isCurrent && meta) {
+          setDetectedMeta(meta);
+          if (meta.genre) {
+            setAutoDetectedGenre(meta.genre);
+            setFormData((prev) => {
+              if (!prev.genre || prev.genre === 'General' || prev.genre === 'Live Cover') {
+                return { ...prev, genre: meta.genre };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        // silent fallback
+      } finally {
+        if (isCurrent) setDetectingGenre(false);
+      }
+    }, 350);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [formData.title, formData.artist, showAddModal]);
+
+  // Fallback explicit trigger
   const triggerAutoGenre = async (title, artist) => {
     if (!title || title.trim().length < 2) return;
     setDetectingGenre(true);
@@ -54,8 +99,8 @@ export default function Setlist() {
       const meta = await getSongMetadata(title.trim(), artist?.trim() || '');
       if (meta?.genre) {
         setAutoDetectedGenre(meta.genre);
+        setDetectedMeta(meta);
         setFormData((prev) => {
-          // If genre is empty or generic, auto-fill it
           if (!prev.genre || prev.genre === 'General' || prev.genre === 'Live Cover') {
             return { ...prev, genre: meta.genre };
           }
@@ -66,6 +111,55 @@ export default function Setlist() {
       // quiet fallback
     } finally {
       setDetectingGenre(false);
+    }
+  };
+
+  // Bulk auto-detect genres for any songs with missing genres in the setlist
+  const handleAutoEnrichAllGenres = async () => {
+    const missing = songs.filter(
+      (s) => !s.genre || s.genre === 'Live Cover' || s.genre === 'General' || s.genre === 'Live Music'
+    );
+
+    if (missing.length === 0) {
+      toast.success('All songs in your setlist already have verified genres! 🎉');
+      return;
+    }
+
+    setEnrichingAllGenres(true);
+    toast.loading(`Auto-detecting genres for ${missing.length} songs...`, { id: 'enrich-genres' });
+
+    let updatedCount = 0;
+    try {
+      const updatedSongs = [...songs];
+
+      for (const song of missing) {
+        try {
+          const detected = await getSongGenre(song.title, song.artist);
+          if (detected && detected !== song.genre) {
+            // Update in Supabase
+            await supabase
+              .from('songs')
+              .update({ genre: detected })
+              .eq('id', song.id);
+
+            const idx = updatedSongs.findIndex((s) => s.id === song.id);
+            if (idx !== -1) {
+              updatedSongs[idx] = { ...updatedSongs[idx], genre: detected };
+              updatedCount++;
+            }
+          }
+        } catch (e) {
+          // continue to next song
+        }
+      }
+
+      setSongs(updatedSongs);
+      toast.success(`✓ Successfully detected and saved genres for ${updatedCount} songs!`, { id: 'enrich-genres' });
+    } catch (err) {
+      console.error('Error enriching genres:', err);
+      toast.error('Failed to auto-detect some genres', { id: 'enrich-genres' });
+    } finally {
+      setEnrichingAllGenres(false);
     }
   };
 
@@ -123,6 +217,7 @@ export default function Setlist() {
         genre: resolvedGenre,
         price: priceNum,
         note: formData.note.trim(),
+        image_url: detectedMeta?.artworkUrl || null,
         is_active: true,
       };
 
@@ -139,6 +234,7 @@ export default function Setlist() {
       setShowAddModal(false);
       setFormData({ title: '', artist: '', genre: '', price: '5.00', note: '' });
       setAutoDetectedGenre('');
+      setDetectedMeta(null);
     } catch (err) {
       console.error('Add song error:', err);
       toast.error('Failed to add song');
@@ -334,6 +430,17 @@ export default function Setlist() {
 
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
           <button
+            onClick={handleAutoEnrichAllGenres}
+            disabled={enrichingAllGenres}
+            className="btn btn-outline btn-sm"
+            style={{ borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }}
+            title="Automatically detect and fill missing genres for your songs"
+          >
+            {enrichingAllGenres ? <RefreshCw size={15} className="spin" /> : <Sparkles size={15} />}
+            <span>{enrichingAllGenres ? 'Detecting Genres...' : 'Auto-Detect Genres'}</span>
+          </button>
+
+          <button
             onClick={() => setShowBulkModal(true)}
             className="btn btn-outline btn-sm"
           >
@@ -483,11 +590,7 @@ export default function Setlist() {
                       <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700 }}>
                         {song.title}
                       </h4>
-                      {song.genre && (
-                        <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                          {song.genre}
-                        </span>
-                      )}
+                      <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       {song.artist} {song.note ? `• ${song.note}` : ''}
@@ -623,14 +726,69 @@ export default function Setlist() {
                 />
               </div>
 
+              {/* Real-Time Live Catalog Match & Auto-Detected Cover Art + Genre Preview */}
+              {detectedMeta && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.85rem',
+                  padding: '0.85rem 1rem',
+                  background: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1rem',
+                  animation: 'fadeIn 0.2s ease-in-out'
+                }}>
+                  {detectedMeta.artworkUrl ? (
+                    <img
+                      src={detectedMeta.artworkUrl}
+                      alt={detectedMeta.title}
+                      style={{ width: '46px', height: '46px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '8px',
+                      background: 'rgba(59, 130, 246, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Disc3 size={24} color="#60a5fa" />
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                      <span className="badge badge-blue" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                        <Sparkles size={11} /> AUTO-MATCHED
+                      </span>
+                      {detectedMeta.genre && (
+                        <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                          ✓ {detectedMeta.genre}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {detectedMeta.title}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {detectedMeta.artist} {detectedMeta.album ? `• ${detectedMeta.album}` : ''}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                    <label className="label" style={{ marginBottom: 0 }}>Genre</label>
+                    <label className="label" style={{ marginBottom: 0 }}>Genre *</label>
                     {detectingGenre ? (
                       <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Detecting...</span>
                     ) : autoDetectedGenre ? (
-                      <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 600 }}>✓ Auto-detected</span>
+                      <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700 }}>✓ Auto-Detected</span>
                     ) : null}
                   </div>
                   <input
@@ -641,8 +799,8 @@ export default function Setlist() {
                     className="input-field"
                   />
                   {autoDetectedGenre && (
-                    <span style={{ fontSize: '0.725rem', color: 'var(--text-dim)', marginTop: '0.25rem', display: 'block' }}>
-                      Identified as <strong style={{ color: '#60a5fa' }}>{autoDetectedGenre}</strong> via Apple catalog
+                    <span style={{ fontSize: '0.725rem', color: '#34d399', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <CheckCircle2 size={12} /> Auto-detected as <strong>{autoDetectedGenre}</strong>
                     </span>
                   )}
                 </div>

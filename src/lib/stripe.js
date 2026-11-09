@@ -143,6 +143,47 @@ export async function processStripePayment({
 }
 
 /**
+ * Creates a real-money Stripe Checkout redirect session if backend is configured
+ */
+export async function createStripeCheckoutRedirect({
+  amount,
+  requestlyFee = 0,
+  bandStripeAccountId = '',
+  songTitle = 'Song Request',
+  fanName = 'Anonymous Fan',
+  bandId = '',
+  slug = 'live',
+}) {
+  try {
+    const res = await fetch('/.netlify/functions/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount,
+        requestlyFee,
+        bandStripeAccountId,
+        songTitle,
+        fanName,
+        bandId,
+        slug,
+        origin: typeof window !== 'undefined' ? window.location.origin : 'https://fluffy-swan-6c20ad.netlify.app',
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.url) {
+        window.location.href = data.url;
+        return true;
+      }
+    }
+  } catch (err) {
+    console.debug('Checkout session redirect skipped:', err.message);
+  }
+  return false;
+}
+
+/**
  * Onboard band via Stripe Connect Express
  */
 export async function initiateStripeConnectOnboarding({ bandId, bandName, email }) {
