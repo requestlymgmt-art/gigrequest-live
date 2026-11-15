@@ -22,6 +22,7 @@ import { supabase, DEMO_BAND_ID, DEMO_BAND_SLUG } from '../lib/supabase';
 import { calculateFeeBreakdown, processStripePayment, getAvailableWallets, createStripeCheckoutRedirect } from '../lib/stripe';
 import SongArtwork from '../components/common/SongArtwork';
 import SongGenreBadge from '../components/common/SongGenreBadge';
+import AlphabetFastScroll from '../components/common/AlphabetFastScroll';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -526,8 +527,19 @@ export default function FanLivePage() {
         )}
       </div>
 
-      {/* Song Catalog List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.5rem' }}>
+      {/* Song Catalog List with Alphabet Fast Scroll */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.65rem',
+        marginBottom: '1.5rem',
+        position: 'relative',
+        paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
+        transition: 'padding-left 0.2s ease',
+      }}>
+        {/* Fast Alphabetical Cursor on Left Side */}
+        <AlphabetFastScroll songs={filteredSongs} side="left" offset={110} />
+
         {filteredSongs.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
@@ -540,25 +552,62 @@ export default function FanLivePage() {
             )}
           </div>
         ) : (
-          filteredSongs.map((song) => {
+          filteredSongs.map((song, index) => {
             const price = Number(song.price) || 5;
+            const letter = (song.title || '').trim().charAt(0).toUpperCase();
+            const groupLetter = /[A-Z]/.test(letter) ? letter : '#';
+            const prevSong = index > 0 ? filteredSongs[index - 1] : null;
+            const prevLetter = prevSong ? (prevSong.title || '').trim().charAt(0).toUpperCase() : '';
+            const prevGroup = /[A-Z]/.test(prevLetter) ? prevLetter : '#';
+            const isFirstOfGroup = index === 0 || groupLetter !== prevGroup;
 
             return (
-              <div
-                key={song.id}
-                onClick={() => isAcceptingRequests && handleOpenSongModal(song)}
-                className="glass-card"
-                style={{
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '0.85rem',
-                  cursor: isAcceptingRequests ? 'pointer' : 'not-allowed',
-                  opacity: isAcceptingRequests ? 1 : 0.6,
-                  transition: 'transform 0.15s ease, border-color 0.15s ease',
-                }}
-              >
+              <div key={song.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {/* Alphabetical Section Divider */}
+                {isFirstOfGroup && (
+                  <div
+                    id={`letter-anchor-${groupLetter}`}
+                    data-letter-group={groupLetter}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                      padding: '0.65rem 0.25rem 0.15rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: '#60a5fa',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    <span style={{
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      padding: '0.1rem 0.5rem',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.2
+                    }}>
+                      {groupLetter}
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(59, 130, 246, 0.25)' }} />
+                  </div>
+                )}
+
+                <div
+                  onClick={() => isAcceptingRequests && handleOpenSongModal(song)}
+                  className="glass-card"
+                  style={{
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    cursor: isAcceptingRequests ? 'pointer' : 'not-allowed',
+                    opacity: isAcceptingRequests ? 1 : 0.6,
+                    transition: 'transform 0.15s ease, border-color 0.15s ease',
+                  }}
+                >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                   <SongArtwork
                     title={song.title}
@@ -616,7 +665,8 @@ export default function FanLivePage() {
                   </div>
                 </div>
               </div>
-            );
+            </div>
+          );
           })
         )}
       </div>

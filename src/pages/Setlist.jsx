@@ -23,6 +23,7 @@ import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
 import SongGenreBadge from '../components/common/SongGenreBadge';
+import AlphabetFastScroll from '../components/common/AlphabetFastScroll';
 import { getSongMetadata, getSongGenre, searchSongSuggestions } from '../utils/artwork';
 import toast from 'react-hot-toast';
 
@@ -681,26 +682,71 @@ export default function Setlist() {
           background: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          position: 'relative',
+          paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
+          transition: 'padding-left 0.2s ease',
         }}>
+          {/* Alphabet Fast Scroll on Left */}
+          <AlphabetFastScroll songs={filteredSongs} side="left" offset={100} />
+
           {filteredSongs.map((song, idx) => {
             const isEditing = editingSongId === song.id;
+            const letter = (song.title || '').trim().charAt(0).toUpperCase();
+            const groupLetter = /[A-Z]/.test(letter) ? letter : '#';
+            const prevSong = idx > 0 ? filteredSongs[idx - 1] : null;
+            const prevLetter = prevSong ? (prevSong.title || '').trim().charAt(0).toUpperCase() : '';
+            const prevGroup = /[A-Z]/.test(prevLetter) ? prevLetter : '#';
+            const isFirstOfGroup = idx === 0 || groupLetter !== prevGroup;
 
             return (
-              <div
-                key={song.id}
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  padding: '1rem 1.25rem',
-                  borderBottom: idx !== filteredSongs.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                  opacity: song.is_active ? 1 : 0.5,
-                  transition: 'background 0.15s ease'
-                }}
-              >
+              <div key={song.id}>
+                {/* Alphabetical Section Divider */}
+                {isFirstOfGroup && (
+                  <div
+                    id={`letter-anchor-${groupLetter}`}
+                    data-letter-group={groupLetter}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                      padding: '0.65rem 1.25rem 0.25rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: '#60a5fa',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      background: 'rgba(59, 130, 246, 0.04)',
+                      borderTop: idx > 0 ? '1px solid var(--border-subtle)' : 'none',
+                    }}
+                  >
+                    <span style={{
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      padding: '0.1rem 0.5rem',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.2
+                    }}>
+                      {groupLetter}
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(59, 130, 246, 0.2)' }} />
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    borderBottom: idx !== filteredSongs.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                    opacity: song.is_active ? 1 : 0.5,
+                    transition: 'background 0.15s ease'
+                  }}
+                >
                 {/* Song Artwork + Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 250px' }}>
                   <SongArtwork
@@ -809,7 +855,8 @@ export default function Setlist() {
                   </button>
                 </div>
               </div>
-            );
+            </div>
+          );
           })}
         </div>
       )}
