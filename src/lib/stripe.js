@@ -1,6 +1,10 @@
 // src/lib/stripe.js
 // Handles transparent fee calculations, Apple Pay, Google Pay, and Stripe Connect
 
+export const STRIPE_LIVE_PUBLISHABLE_KEY = 
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
+  'pk_live_51UULnGHqa94w8vNdgHBKPxWbXg2OZhz9au6gUSHAL4x4PfOrSJjVBFRQjfqeNdesbD7eZ9El7OwpbjlFcfUJBJbX004WrU9hGo';
+
 export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
   const base = Math.max(0, Number(baseAmount) || 0);
   const tip = Math.max(0, Number(tipAmount) || 0);

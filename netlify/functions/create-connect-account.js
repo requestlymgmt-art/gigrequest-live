@@ -23,7 +23,7 @@ export const handler = async (event) => {
     const { bandId, bandName, email, accountId: incomingAccountId, returnUrl } = body;
     const origin = returnUrl || 'https://fluffy-swan-6c20ad.netlify.app';
 
-    if (stripe && process.env.STRIPE_SECRET_KEY) {
+    if (stripe) {
       let targetAccountId = incomingAccountId;
       let isExisting = false;
 
@@ -103,32 +103,25 @@ export const handler = async (event) => {
         }),
       };
     }
-
-    // When STRIPE_SECRET_KEY is not yet added in Netlify environment variables:
-    const testAccountId = incomingAccountId && incomingAccountId.startsWith('acct_test_')
-      ? incomingAccountId
-      : `acct_test_${Math.random().toString(36).substring(2, 10)}`;
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        requiresLiveKey: true,
-        accountId: testAccountId,
-        url: null,
-        mode: 'test_simulation',
-        message: 'Stripe Connect live bank onboarding requires STRIPE_SECRET_KEY in Netlify settings.',
-      }),
-    };
   } catch (err) {
     console.error('Stripe Connect creation error:', err);
+
+    // Specific guidance if platform profile questionnaire is needed on Stripe dashboard
+    const isProfileNotice = err.message && err.message.includes('platform profile');
     return {
-      statusCode: 500,
-      headers,
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         success: false,
-        error: err.message || 'Failed to create Connect account',
+        needsPlatformProfile: isProfileNotice,
+        dashboardUrl: 'https://dashboard.stripe.com/connect/accounts/overview',
+        error: isProfileNotice
+          ? 'Please complete your 1-minute platform profile at dashboard.stripe.com/connect/accounts/overview to enable live onboarding.'
+          : (err.message || 'Failed to create Connect account'),
       }),
     };
   }

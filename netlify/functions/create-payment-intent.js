@@ -44,8 +44,8 @@ export const handler = async (event) => {
     const amountInCents = Math.round(Number(amount) * 100);
     const feeInCents = Math.round(Number(requestlyFee || 0) * 100);
 
-    // If real Stripe secret key is present, invoke real Stripe API
-    if (stripe && process.env.STRIPE_SECRET_KEY) {
+    // Invoke Stripe Live API
+    if (stripe) {
       const paymentIntentParams = {
         amount: amountInCents,
         currency: currency.toLowerCase(),
@@ -66,8 +66,8 @@ export const handler = async (event) => {
         },
       };
 
-      // If band has a Stripe Connect account connected, transfer net funds to them
-      if (bandStripeAccountId && bandStripeAccountId.startsWith('acct_')) {
+      // If band has a verified Stripe Connect account connected, transfer net funds to them
+      if (bandStripeAccountId && bandStripeAccountId.startsWith('acct_') && !bandStripeAccountId.startsWith('acct_test_')) {
         paymentIntentParams.application_fee_amount = feeInCents;
         paymentIntentParams.transfer_data = {
           destination: bandStripeAccountId,

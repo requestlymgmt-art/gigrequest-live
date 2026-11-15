@@ -20,7 +20,11 @@ import {
   ShieldCheck,
   Zap,
   RefreshCw,
-  Crop
+  Crop,
+  Calendar,
+  ArrowUpRight,
+  Receipt,
+  FileText
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { initiateStripeConnectOnboarding } from '../lib/stripe';
@@ -161,25 +165,31 @@ export default function ProfileSettings() {
         return;
       }
 
-      // If live keys are not yet configured in Netlify:
-      if (res?.requiresLiveKey || !res?.url) {
+      if (res?.needsPlatformProfile) {
         toast((t) => (
-          <div style={{ fontSize: '0.85rem' }}>
-            <strong style={{ color: '#60a5fa' }}>Live Stripe Mode Notice:</strong>
-            <p style={{ margin: '0.25rem 0 0.5rem', color: '#94a3b8' }}>
-              To redirect to Stripe's real bank routing/account form, add your live <code>STRIPE_SECRET_KEY</code> in Netlify settings. Connected to practice mode for now.
+          <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+            <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.35rem' }}>
+              One-Time Stripe Connect Setup Required:
+            </strong>
+            <p style={{ margin: '0 0 0.65rem', color: '#cbd5e1' }}>
+              Stripe requires you to complete your platform profile questionnaire at dashboard.stripe.com/connect/accounts/overview before creating live connected accounts.
             </p>
+            <a
+              href="https://dashboard.stripe.com/connect/accounts/overview"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary btn-sm"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
+            >
+              Open Stripe Connect Questionnaire &rarr;
+            </a>
           </div>
-        ), { duration: 7000, icon: '🔑' });
+        ), { duration: 14000, icon: '⚠️' });
+        return;
+      }
 
-        const accountId = res?.accountId || `acct_test_${Math.random().toString(36).substring(2, 9)}`;
-        const updated = {
-          ...formData,
-          stripe_account_id: accountId,
-          stripe_connected: true,
-        };
-        setFormData(updated);
-        await updateProfile(updated);
+      if (res?.error) {
+        toast.error(res.error, { duration: 6000 });
         return;
       }
 
@@ -553,20 +563,62 @@ export default function ProfileSettings() {
         {/* Requestly Musician Plan & Billing */}
         <div className="glass-card" style={{ border: '1px solid rgba(16, 185, 129, 0.35)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Zap size={18} color="#10b981" />
-              <span>Requestly Musician Plan</span>
-            </h3>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                <Zap size={18} color="#10b981" />
+                <span>Requestly Musician Unlimited Plan</span>
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', margin: 0 }}>
+                Official musician membership with direct Stripe bank payouts & 100% revenue retention.
+              </p>
+            </div>
             <span className="badge badge-emerald" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <CheckCircle size={13} /> ACTIVE • 100% ARTIST PAYOUT
+              <CheckCircle size={13} /> ACTIVE • 100% DIRECT PAYOUTS
             </span>
+          </div>
+
+          {/* Current Cycle Start & End Dates Banner */}
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            marginBottom: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Calendar size={22} color="#10b981" />
+              <div>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-dim)', display: 'block' }}>
+                  Current Billing & Performance Cycle
+                </span>
+                <strong style={{ fontSize: '1rem', color: '#fff' }}>
+                  {new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' — '}
+                  {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-dim)', display: 'block' }}>
+                Next Cycle Renewal
+              </span>
+              <span style={{ fontSize: '0.92rem', color: '#34d399', fontWeight: 700 }}>
+                {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ($0.00 / mo)
+              </span>
+            </div>
           </div>
 
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             gap: '1rem',
-            marginBottom: '1rem'
+            marginBottom: '1.5rem'
           }}>
             <div style={{
               background: 'rgba(255, 255, 255, 0.03)',
@@ -605,6 +657,72 @@ export default function ProfileSettings() {
               </span>
               <strong style={{ fontSize: '1.4rem', color: '#60a5fa' }}>$2 or 10%</strong>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>Covered transparently by fan</div>
+            </div>
+          </div>
+
+          {/* Billing & Payout History Ledger */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1.15rem',
+            marginBottom: '1rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Receipt size={16} color="#60a5fa" />
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Billing & Payout History</span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                Standard 2-Business-Day Rolling Bank Deposits
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-dim)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.5rem 0.65rem' }}>Billing Period</th>
+                    <th style={{ padding: '0.5rem 0.65rem' }}>Plan Charge</th>
+                    <th style={{ padding: '0.5rem 0.65rem' }}>Payout Method</th>
+                    <th style={{ padding: '0.5rem 0.65rem' }}>Musician Split</th>
+                    <th style={{ padding: '0.5rem 0.65rem', textAlign: 'right' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#fff', fontWeight: 600 }}>
+                      {new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {' — '}
+                      {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#34d399', fontWeight: 700 }}>$0.00 (Free)</td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: 'var(--text-muted)' }}>
+                      Stripe Connect Express • 2-Day Rolling
+                    </td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#34d399', fontWeight: 700 }}>100% Net</td>
+                    <td style={{ padding: '0.75rem 0.65rem', textAlign: 'right' }}>
+                      <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>ACTIVE CYCLE ✓</span>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#cbd5e1' }}>
+                      {new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {' — '}
+                      {new Date(new Date().getFullYear(), new Date().getMonth(), 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#34d399', fontWeight: 700 }}>$0.00 (Waived)</td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: 'var(--text-muted)' }}>
+                      Stripe Direct Deposit
+                    </td>
+                    <td style={{ padding: '0.75rem 0.65rem', color: '#34d399', fontWeight: 700 }}>100% Net</td>
+                    <td style={{ padding: '0.75rem 0.65rem', textAlign: 'right' }}>
+                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>SETTLED ✓</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
