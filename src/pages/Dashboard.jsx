@@ -160,11 +160,11 @@ export default function Dashboard() {
       );
 
       if (newStatus === 'playing') {
-        toast('🎸 Now Playing! Payment captured.', { icon: '🔥' });
+        toast('🎸 Now Playing!', { icon: '🔥' });
       } else if (newStatus === 'completed') {
         toast.success('Marked as played!');
       } else if (newStatus === 'declined') {
-        toast('Request declined. Fan was not charged (hold released).', { icon: 'ℹ️' });
+        toast('Request declined. Fan was not charged.', { icon: 'ℹ️' });
       }
     } catch (err) {
       toast.error('Failed to update status');
@@ -553,19 +553,19 @@ export default function Dashboard() {
                     <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#34d399' }}>
                       +${netAmount.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
-                      {req.payment_status === 'authorized' ? (
-                        <span style={{ color: '#60a5fa' }}>Pre-Authorized Hold ⏳</span>
-                      ) : req.payment_status === 'cancelled' ? (
-                        <span style={{ color: '#f87171' }}>Not Charged (Released) ✕</span>
-                      ) : req.payment_method === 'apple_pay' ? (
-                        <span style={{ color: '#10b981' }}> Apple Pay ✓</span>
-                      ) : req.payment_method === 'google_pay' ? (
-                        <span style={{ color: '#10b981' }}>G Pay ✓</span>
-                      ) : (
-                        <span style={{ color: '#10b981' }}>Card Paid ✓</span>
-                      )}
-                    </div>
+                    {(req.payment_status === 'paid' || req.payment_status === 'cancelled') && (
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem', marginTop: '0.2rem' }}>
+                        {req.payment_status === 'cancelled' ? (
+                          <span style={{ color: '#f87171' }}>Not Charged ✕</span>
+                        ) : req.payment_method === 'apple_pay' ? (
+                          <span style={{ color: '#10b981' }}> Apple Pay ✓</span>
+                        ) : req.payment_method === 'google_pay' ? (
+                          <span style={{ color: '#10b981' }}>G Pay ✓</span>
+                        ) : (
+                          <span style={{ color: '#10b981' }}>Card Paid ✓</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

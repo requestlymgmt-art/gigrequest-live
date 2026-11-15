@@ -108,7 +108,7 @@ export default function StageMode() {
 
       if (error) throw error;
 
-      toast('🎸 Now Playing on Stage! Payment captured.', { icon: '🔥' });
+      toast('🎸 Now Playing on Stage!', { icon: '🔥' });
       fetchLiveQueue();
     } catch (err) {
       toast.error('Could not start song');
