@@ -99,7 +99,9 @@ export async function processStripePayment({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount: totalCharged,
+        artistNet: amount, // Band keeps 100% of song price + tip!
         requestlyFee,
+        stripeFee,
         bandStripeAccountId,
         songTitle,
         fanName,

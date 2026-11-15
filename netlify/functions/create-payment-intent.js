@@ -43,6 +43,9 @@ export const handler = async (event) => {
 
     const amountInCents = Math.round(Number(amount) * 100);
     const feeInCents = Math.round(Number(requestlyFee || 0) * 100);
+    const artistNetInCents = body.artistNet
+      ? Math.round(Number(body.artistNet) * 100)
+      : Math.max(0, amountInCents - feeInCents - Math.round(Number(body.stripeFee || 0) * 100));
 
     // Invoke Stripe Live API
     if (stripe) {
@@ -66,11 +69,13 @@ export const handler = async (event) => {
         },
       };
 
-      // If band has a verified Stripe Connect account connected, transfer net funds to them
+      // Direct Stripe Connect Split:
+      // Band receives 100% of their song price and tip via transfer_data.amount!
+      // Requestly platform receives the full platform fee, and Stripe fees are covered transparently by the fan.
       if (bandStripeAccountId && bandStripeAccountId.startsWith('acct_') && !bandStripeAccountId.startsWith('acct_test_')) {
-        paymentIntentParams.application_fee_amount = feeInCents;
         paymentIntentParams.transfer_data = {
           destination: bandStripeAccountId,
+          amount: artistNetInCents,
         };
       }
 
