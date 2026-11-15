@@ -33,6 +33,8 @@ import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/common/ImageCropModal';
 import toast from 'react-hot-toast';
 
+const isLegacyTest = (rawId) => Boolean(rawId && (rawId.startsWith('acct_test_') || rawId.includes('test')));
+
 export default function ProfileSettings() {
   const { profile, updateProfile, isDemoMode } = useAuth();
   const [searchParams] = useSearchParams();
@@ -43,6 +45,10 @@ export default function ProfileSettings() {
   const [showManualUrl, setShowManualUrl] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [rawImageForCrop, setRawImageForCrop] = useState(null);
+  const [stripeProfileNotice, setStripeProfileNotice] = useState(false);
+  const [showManualStripe, setShowManualStripe] = useState(false);
+  const [manualStripeId, setManualStripeId] = useState('');
+  const [linkingManual, setLinkingManual] = useState(false);
 
   const [formData, setFormData] = useState({
     band_name: '',
@@ -65,6 +71,10 @@ export default function ProfileSettings() {
 
   useEffect(() => {
     if (profile) {
+      const rawStripeId = profile.stripe_account_id || '';
+      const isTestMock = isLegacyTest(rawStripeId);
+      const cleanStripeId = isTestMock ? '' : rawStripeId;
+
       setFormData({
         band_name: profile.band_name || '',
         slug: profile.slug || '',
@@ -77,12 +87,17 @@ export default function ProfileSettings() {
         custom_request_price: profile.custom_request_price ?? 15.00,
         accepting_requests: profile.accepting_requests ?? true,
         stripe_publishable_key: profile.stripe_publishable_key || '',
-        stripe_account_id: profile.stripe_account_id || '',
-        stripe_connected: profile.stripe_connected ?? (!!profile.stripe_account_id),
+        stripe_account_id: cleanStripeId,
+        stripe_connected: isTestMock ? false : (profile.stripe_connected ?? (!!cleanStripeId)),
         venmo_handle: profile.venmo_handle || '',
         cashapp_handle: profile.cashapp_handle || '',
         instagram_handle: profile.instagram_handle || '',
       });
+
+      // Automatically purge legacy test simulations from Supabase so they never appear again
+      if (isTestMock) {
+        updateProfile({ stripe_account_id: '', stripe_connected: false }).catch(() => {});
+      }
     }
   }, [profile]);
 
@@ -92,17 +107,20 @@ export default function ProfileSettings() {
     const accountId = searchParams.get('account_id');
 
     if (connectStatus === 'success') {
-      const targetAccountId = accountId || formData.stripe_account_id || `acct_live_${Math.random().toString(36).substring(2, 9)}`;
-      const updated = {
-        ...formData,
-        stripe_account_id: targetAccountId,
-        stripe_connected: true,
-      };
-      setFormData(updated);
-      updateProfile(updated).then(() => {
-        toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
+      if (accountId && accountId.startsWith('acct_') && !isLegacyTest(accountId)) {
+        const updated = {
+          ...formData,
+          stripe_account_id: accountId,
+          stripe_connected: true,
+        };
+        setFormData(updated);
+        updateProfile(updated).then(() => {
+          toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        });
+      } else {
         window.history.replaceState({}, document.title, window.location.pathname);
-      });
+      }
     } else if (connectStatus === 'refresh') {
       toast('Stripe onboarding session expired. Click "Connect Bank" to resume.', { icon: 'ℹ️' });
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -166,13 +184,14 @@ export default function ProfileSettings() {
       }
 
       if (res?.needsPlatformProfile) {
+        setStripeProfileNotice(true);
         toast((t) => (
           <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
             <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.35rem' }}>
-              One-Time Stripe Connect Setup Required:
+              One-Time Stripe Connect Platform Setup:
             </strong>
             <p style={{ margin: '0 0 0.65rem', color: '#cbd5e1' }}>
-              Stripe requires you to complete your platform profile questionnaire at dashboard.stripe.com/connect/accounts/overview before creating live connected accounts.
+              Stripe requires you to answer a 1-minute platform questionnaire at dashboard.stripe.com/connect/accounts/overview before creating live connected accounts.
             </p>
             <a
               href="https://dashboard.stripe.com/connect/accounts/overview"
@@ -181,10 +200,10 @@ export default function ProfileSettings() {
               className="btn btn-primary btn-sm"
               style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
             >
-              Open Stripe Connect Questionnaire &rarr;
+              Open Stripe Connect Setup &rarr;
             </a>
           </div>
-        ), { duration: 14000, icon: '⚠️' });
+        ), { duration: 15000, icon: '⚠️' });
         return;
       }
 
@@ -193,20 +212,49 @@ export default function ProfileSettings() {
         return;
       }
 
-      const accountId = res?.accountId || `acct_live_${Math.random().toString(36).substring(2, 9)}`;
-      const updated = {
-        ...formData,
-        stripe_account_id: accountId,
-        stripe_connected: true,
-      };
-      setFormData(updated);
-      await updateProfile(updated);
-      toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
+      if (res?.accountId && res.accountId.startsWith('acct_') && !isLegacyTest(res.accountId)) {
+        const updated = {
+          ...formData,
+          stripe_account_id: res.accountId,
+          stripe_connected: true,
+        };
+        setFormData(updated);
+        await updateProfile(updated);
+        toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
+      } else {
+        toast.error('Unable to create Stripe Connect link. Please verify Stripe settings.');
+      }
     } catch (err) {
       console.error('Stripe Connect error:', err);
       toast.error('Failed to link Stripe account');
     } finally {
       setConnectingStripe(false);
+    }
+  };
+
+  const handleManualLinkStripe = async (e) => {
+    if (e) e.preventDefault();
+    const clean = (manualStripeId || '').trim();
+    if (!clean.startsWith('acct_') || isLegacyTest(clean)) {
+      toast.error('Please enter a valid live Stripe Express Account ID (starts with acct_1...)');
+      return;
+    }
+    setLinkingManual(true);
+    try {
+      const updated = {
+        ...formData,
+        stripe_account_id: clean,
+        stripe_connected: true,
+      };
+      setFormData(updated);
+      await updateProfile(updated);
+      setManualStripeId('');
+      setShowManualStripe(false);
+      toast.success('🎉 Stripe Connected Account linked successfully! Direct deposits active.');
+    } catch (err) {
+      toast.error('Failed to link account ID');
+    } finally {
+      setLinkingManual(false);
     }
   };
 
@@ -746,7 +794,7 @@ export default function ProfileSettings() {
               <CreditCard size={18} color="#3b82f6" />
               <span>Stripe Connect Express Payouts</span>
             </h3>
-            {formData.stripe_account_id || profile?.stripe_connected ? (
+            {formData.stripe_account_id && !isLegacyTest(formData.stripe_account_id) ? (
               <span className="badge badge-emerald" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <CheckCircle size={13} /> BANK LINKED & ACTIVE
               </span>
@@ -773,10 +821,10 @@ export default function ProfileSettings() {
           </div>
 
           {/* Connected or Not Connected View */}
-          {formData.stripe_account_id || profile?.stripe_connected ? (
+          {formData.stripe_account_id && !isLegacyTest(formData.stripe_account_id) ? (
             <div style={{
-              background: formData.stripe_account_id?.startsWith('acct_test_') ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.06)',
-              border: `1px solid ${formData.stripe_account_id?.startsWith('acct_test_') ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.25)'}`,
+              background: 'rgba(16, 185, 129, 0.06)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem',
               marginBottom: '1.5rem'
@@ -787,18 +835,12 @@ export default function ProfileSettings() {
                     <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
                       Connected Stripe Express Account
                     </span>
-                    {formData.stripe_account_id?.startsWith('acct_test_') ? (
-                      <span className="badge badge-amber" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
-                        PRACTICE TEST MODE
-                      </span>
-                    ) : (
-                      <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
-                        LIVE PRODUCTION
-                      </span>
-                    )}
+                    <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                      LIVE PRODUCTION
+                    </span>
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: formData.stripe_account_id?.startsWith('acct_test_') ? '#f59e0b' : '#34d399', fontFamily: 'monospace' }}>
-                    {formData.stripe_account_id || 'acct_express_verified'}
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>
+                    {formData.stripe_account_id}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -808,7 +850,7 @@ export default function ProfileSettings() {
                     onClick={handleConnectStripe}
                     className="btn btn-primary btn-sm"
                   >
-                    <span>{formData.stripe_account_id?.startsWith('acct_test_') ? 'Go Live / Connect Real Bank' : 'Update Bank / Payout Settings'}</span>
+                    <span>Update Bank / Payout Settings</span>
                   </button>
                   <button
                     type="button"
@@ -821,17 +863,10 @@ export default function ProfileSettings() {
                 </div>
               </div>
 
-              {formData.stripe_account_id?.startsWith('acct_test_') ? (
-                <div style={{ fontSize: '0.8rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem', lineHeight: 1.4 }}>
-                  <AlertCircle size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
-                  <span>Currently using practice simulation. To connect a real bank routing/account number, configure your live Stripe keys in Netlify, then click "Go Live / Connect Real Bank".</span>
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CheckCircle size={14} color="#10b981" />
-                  <span>Automatic 2-business-day rolling deposits enabled directly to your verified bank account.</span>
-                </div>
-              )}
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <CheckCircle size={14} color="#10b981" />
+                <span>Automatic 2-business-day rolling deposits enabled directly to your verified bank account.</span>
+              </div>
             </div>
           ) : (
             <div style={{
@@ -844,10 +879,10 @@ export default function ProfileSettings() {
             }}>
               <CreditCard size={36} color="#3b82f6" style={{ margin: '0 auto 0.75rem' }} />
               <h4 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                Connect Your Bank with Stripe
+                Connect Your Bank with Stripe Express
               </h4>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: '480px', margin: '0 auto 1.25rem' }}>
-                Link your checking account or debit card in 60 seconds with Stripe Express. Fans can instantly pay you via Apple Pay, Google Pay, or card!
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: '520px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
+                Link your checking account or debit card in 60 seconds with Stripe Express. Fans can instantly pay you via Apple Pay, Google Pay, or card! Standard 2-business-day rolling deposits go directly into your bank account.
               </p>
               <button
                 type="button"
@@ -859,9 +894,75 @@ export default function ProfileSettings() {
                 {connectingStripe ? (
                   <span>Connecting to Stripe...</span>
                 ) : (
-                  <span>Connect Bank Account with Stripe (1-Click)</span>
+                  <span>Connect Bank Account with Stripe (1-Click Express)</span>
                 )}
               </button>
+
+              {/* Stripe Platform Setup Guidance & Manual Account ID Entry */}
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1rem 1.25rem',
+                marginTop: '1.5rem',
+                textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                  <Sparkles size={16} color="#60a5fa" />
+                  <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>
+                    Stripe Live Connect Setup Note
+                  </strong>
+                </div>
+                <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 0.75rem' }}>
+                  To enable 1-click bank onboarding links, Stripe requires the platform owner to complete a quick 1-minute questionnaire on <strong>dashboard.stripe.com/connect/accounts/overview</strong>. Once answered in Stripe, onboarding links work seamlessly for all musicians!
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <a
+                    href="https://dashboard.stripe.com/connect/accounts/overview"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', textDecoration: 'none' }}
+                  >
+                    <span>Open Stripe Connect Questionnaire &rarr;</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setShowManualStripe(!showManualStripe)}
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                  >
+                    <span>{showManualStripe ? 'Hide Manual ID' : 'Or Enter Existing Stripe Account ID'}</span>
+                  </button>
+                </div>
+
+                {showManualStripe && (
+                  <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <label className="label" style={{ fontSize: '0.78rem', marginBottom: '0.35rem' }}>
+                      Have an existing Stripe Express Account ID? Enter here:
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        placeholder="acct_1..."
+                        value={manualStripeId}
+                        onChange={(e) => setManualStripeId(e.target.value)}
+                        className="input-field"
+                        style={{ flex: '1 1 220px', fontSize: '0.85rem' }}
+                      />
+                      <button
+                        type="button"
+                        disabled={linkingManual}
+                        onClick={handleManualLinkStripe}
+                        className="btn btn-emerald btn-sm"
+                        style={{ fontWeight: 700 }}
+                      >
+                        {linkingManual ? 'Linking...' : 'Link Account'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

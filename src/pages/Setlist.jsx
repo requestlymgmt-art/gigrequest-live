@@ -710,14 +710,14 @@ export default function Setlist() {
                     size={46}
                     radius={8}
                   />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                      <h4 style={{ fontSize: '1.05rem', color: '#fff', fontWeight: 700, wordBreak: 'break-word' }}>
                         {song.title}
                       </h4>
                       <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                       {song.artist} {song.note ? `• ${song.note}` : ''}
                     </p>
                   </div>

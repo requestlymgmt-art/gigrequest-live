@@ -256,8 +256,8 @@ export async function initiateStripeConnectOnboarding({ bandId, bandName, email,
         bandId,
         bandName,
         email,
-        accountId,
-        returnUrl: typeof window !== 'undefined' ? window.location.origin : 'https://fluffy-swan-6c20ad.netlify.app',
+        accountId: (accountId && !accountId.startsWith('acct_test_')) ? accountId : '',
+        returnUrl: typeof window !== 'undefined' ? window.location.origin : 'https://requestly.live',
       }),
     });
 
@@ -265,16 +265,18 @@ export async function initiateStripeConnectOnboarding({ bandId, bandName, email,
       const data = await res.json();
       return data;
     }
-  } catch (err) {
-    console.debug('Connect function unavailable, returning simulation:', err.message);
-  }
 
-  // Fallback test connect account
-  return {
-    success: false,
-    requiresLiveKey: true,
-    accountId: `acct_test_${Math.random().toString(36).substring(2, 9)}`,
-    url: null,
-    mode: 'test_simulation',
-  };
+    const errData = await res.json().catch(() => ({}));
+    return {
+      success: false,
+      error: errData.error || 'Failed to initiate Stripe onboarding',
+      needsPlatformProfile: !!errData.needsPlatformProfile,
+    };
+  } catch (err) {
+    console.error('Connect onboarding network error:', err);
+    return {
+      success: false,
+      error: err.message || 'Network error connecting to Stripe',
+    };
+  }
 }

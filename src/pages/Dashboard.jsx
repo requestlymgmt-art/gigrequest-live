@@ -711,15 +711,17 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleTogglePin(req)}
-                    className="btn btn-outline btn-sm"
-                    style={{ color: req.is_pinned ? '#3b82f6' : 'var(--text-dim)' }}
-                    title={req.is_pinned ? 'Unpin request' : 'Pin to top of stage list'}
-                  >
-                    <Pin size={14} />
-                    <span>{req.is_pinned ? 'Unpin' : 'Pin'}</span>
-                  </button>
+                  {req.status !== 'pending' && (
+                    <button
+                      onClick={() => handleTogglePin(req)}
+                      className="btn btn-outline btn-sm"
+                      style={{ color: req.is_pinned ? '#3b82f6' : 'var(--text-dim)' }}
+                      title={req.is_pinned ? 'Unpin request' : 'Pin to top of stage list'}
+                    >
+                      <Pin size={14} />
+                      <span>{req.is_pinned ? 'Unpin' : 'Pin'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

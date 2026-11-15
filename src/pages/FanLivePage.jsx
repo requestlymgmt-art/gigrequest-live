@@ -569,16 +569,13 @@ export default function FanLivePage() {
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h4 style={{
-                      fontSize: '1rem',
+                      fontSize: '0.98rem',
                       color: '#fff',
                       fontWeight: 700,
-                      marginBottom: '0.2rem',
-                      lineHeight: 1.25,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
+                      marginBottom: '0.25rem',
+                      lineHeight: 1.3,
                       wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                     }}>
                       {song.title}
                     </h4>
