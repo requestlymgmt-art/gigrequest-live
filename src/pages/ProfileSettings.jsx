@@ -153,10 +153,33 @@ export default function ProfileSettings() {
         bandId: profile?.id || DEMO_BAND_ID,
         bandName: formData.band_name || 'Band',
         email: profile?.email || 'band@requestly.live',
+        accountId: formData.stripe_account_id,
       });
 
       if (res && res.url) {
         window.location.href = res.url;
+        return;
+      }
+
+      // If live keys are not yet configured in Netlify:
+      if (res?.requiresLiveKey || !res?.url) {
+        toast((t) => (
+          <div style={{ fontSize: '0.85rem' }}>
+            <strong style={{ color: '#60a5fa' }}>Live Stripe Mode Notice:</strong>
+            <p style={{ margin: '0.25rem 0 0.5rem', color: '#94a3b8' }}>
+              To redirect to Stripe's real bank routing/account form, add your live <code>STRIPE_SECRET_KEY</code> in Netlify settings. Connected to practice mode for now.
+            </p>
+          </div>
+        ), { duration: 7000, icon: '🔑' });
+
+        const accountId = res?.accountId || `acct_test_${Math.random().toString(36).substring(2, 9)}`;
+        const updated = {
+          ...formData,
+          stripe_account_id: accountId,
+          stripe_connected: true,
+        };
+        setFormData(updated);
+        await updateProfile(updated);
         return;
       }
 
@@ -634,18 +657,29 @@ export default function ProfileSettings() {
           {/* Connected or Not Connected View */}
           {formData.stripe_account_id || profile?.stripe_connected ? (
             <div style={{
-              background: 'rgba(16, 185, 129, 0.06)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
+              background: formData.stripe_account_id?.startsWith('acct_test_') ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.06)',
+              border: `1px solid ${formData.stripe_account_id?.startsWith('acct_test_') ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.25)'}`,
               borderRadius: 'var(--radius-md)',
               padding: '1.25rem',
               marginBottom: '1.5rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
-                    Connected Stripe Express Account
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
+                      Connected Stripe Express Account
+                    </span>
+                    {formData.stripe_account_id?.startsWith('acct_test_') ? (
+                      <span className="badge badge-amber" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                        PRACTICE TEST MODE
+                      </span>
+                    ) : (
+                      <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                        LIVE PRODUCTION
+                      </span>
+                    )}
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: formData.stripe_account_id?.startsWith('acct_test_') ? '#f59e0b' : '#34d399', fontFamily: 'monospace' }}>
                     {formData.stripe_account_id || 'acct_express_verified'}
                   </div>
                 </div>
@@ -656,7 +690,7 @@ export default function ProfileSettings() {
                     onClick={handleConnectStripe}
                     className="btn btn-primary btn-sm"
                   >
-                    <span>Update Bank / Payout Settings</span>
+                    <span>{formData.stripe_account_id?.startsWith('acct_test_') ? 'Go Live / Connect Real Bank' : 'Update Bank / Payout Settings'}</span>
                   </button>
                   <button
                     type="button"
@@ -668,10 +702,18 @@ export default function ProfileSettings() {
                   </button>
                 </div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <CheckCircle size={14} color="#10b981" />
-                <span>Automatic 2-day rolling deposits enabled directly to your bank account.</span>
-              </div>
+
+              {formData.stripe_account_id?.startsWith('acct_test_') ? (
+                <div style={{ fontSize: '0.8rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem', lineHeight: 1.4 }}>
+                  <AlertCircle size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+                  <span>Currently using practice simulation. To connect a real bank routing/account number, configure your live Stripe keys in Netlify, then click "Go Live / Connect Real Bank".</span>
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={14} color="#10b981" />
+                  <span>Automatic 2-business-day rolling deposits enabled directly to your verified bank account.</span>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{
@@ -687,7 +729,7 @@ export default function ProfileSettings() {
                 Connect Your Bank with Stripe
               </h4>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: '480px', margin: '0 auto 1.25rem' }}>
-                Link your bank account in 60 seconds with Stripe Express. Fans can instantly pay you via Apple Pay, Google Pay, or card!
+                Link your checking account or debit card in 60 seconds with Stripe Express. Fans can instantly pay you via Apple Pay, Google Pay, or card!
               </p>
               <button
                 type="button"

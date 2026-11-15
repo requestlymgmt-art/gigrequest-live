@@ -241,7 +241,7 @@ export async function createStripeCheckoutRedirect({
 /**
  * Onboard band via Stripe Connect Express
  */
-export async function initiateStripeConnectOnboarding({ bandId, bandName, email }) {
+export async function initiateStripeConnectOnboarding({ bandId, bandName, email, accountId }) {
   try {
     const res = await fetch('/.netlify/functions/create-connect-account', {
       method: 'POST',
@@ -250,7 +250,8 @@ export async function initiateStripeConnectOnboarding({ bandId, bandName, email 
         bandId,
         bandName,
         email,
-        returnUrl: window.location.origin,
+        accountId,
+        returnUrl: typeof window !== 'undefined' ? window.location.origin : 'https://fluffy-swan-6c20ad.netlify.app',
       }),
     });
 
@@ -264,8 +265,9 @@ export async function initiateStripeConnectOnboarding({ bandId, bandName, email 
 
   // Fallback test connect account
   return {
-    success: true,
-    accountId: `acct_live_${Math.random().toString(36).substring(2, 9)}`,
+    success: false,
+    requiresLiveKey: true,
+    accountId: `acct_test_${Math.random().toString(36).substring(2, 9)}`,
     url: null,
     mode: 'test_simulation',
   };
