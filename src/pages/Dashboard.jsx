@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('live'); // 'live', 'completed', 'all'
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [decliningId, setDecliningId] = useState(null);
 
   const effectiveBandId = bandId || profile?.id || DEMO_BAND_ID;
 
@@ -587,7 +588,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Stage Action Controls */}
+                {/* Stage Action Controls: Only Accept or Decline */}
                 <div style={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -597,50 +598,116 @@ export default function Dashboard() {
                   paddingTop: '0.75rem',
                   borderTop: '1px solid var(--border-subtle)'
                 }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {req.status !== 'playing' && (
-                      <button
-                        onClick={() => handleUpdateStatus(req.id, 'playing')}
-                        disabled={updatingId === req.id}
-                        className="btn btn-emerald btn-sm"
-                      >
-                        <Play size={14} />
-                        <span>Play Now</span>
-                      </button>
+                  <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Incoming/Pending: Only Accept or Decline */}
+                    {(req.status === 'pending' || req.status === 'up_next') && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(req.id, 'playing')}
+                          disabled={updatingId === req.id}
+                          className="btn btn-emerald btn-sm"
+                          style={{ padding: '0.55rem 1.25rem', fontWeight: 700, fontSize: '0.92rem', gap: '0.45rem' }}
+                        >
+                          <Check size={16} />
+                          <span>Accept</span>
+                        </button>
+
+                        {decliningId === req.id ? (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.65rem',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                            padding: '0.4rem 0.85rem',
+                            borderRadius: 'var(--radius-md)',
+                            animation: 'fadeIn 0.15s ease-in-out',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{ fontSize: '0.825rem', color: '#fecaca', fontWeight: 600 }}>
+                              Are you sure you’d like to reject the request?
+                            </span>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button
+                                onClick={() => {
+                                  setDecliningId(null);
+                                  handleUpdateStatus(req.id, 'declined');
+                                }}
+                                disabled={updatingId === req.id}
+                                style={{
+                                  background: '#ef4444',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '0.25rem 0.75rem',
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setDecliningId(null)}
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '6px',
+                                  padding: '0.25rem 0.75rem',
+                                  fontWeight: 600,
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                No
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDecliningId(req.id)}
+                            disabled={updatingId === req.id}
+                            className="btn btn-outline btn-sm"
+                            style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', padding: '0.55rem 1.15rem', fontWeight: 700, fontSize: '0.92rem', gap: '0.45rem' }}
+                          >
+                            <X size={16} />
+                            <span>Decline</span>
+                          </button>
+                        )}
+                      </>
                     )}
 
-                    {req.status !== 'up_next' && req.status !== 'playing' && req.status !== 'completed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(req.id, 'up_next')}
-                        disabled={updatingId === req.id}
-                        className="btn btn-amber btn-sm"
-                      >
-                        <Clock size={14} />
-                        <span>Up Next</span>
-                      </button>
+                    {/* Once accepted & actively playing */}
+                    {req.status === 'playing' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <span className="badge badge-emerald" style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
+                          <span className="live-pulse" /> NOW PLAYING ON STAGE
+                        </span>
+                        <button
+                          onClick={() => handleUpdateStatus(req.id, 'completed')}
+                          disabled={updatingId === req.id}
+                          className="btn btn-outline btn-sm"
+                          style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', fontWeight: 600 }}
+                        >
+                          <Check size={14} />
+                          <span>Mark Played ✓</span>
+                        </button>
+                      </div>
                     )}
 
-                    {req.status !== 'completed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(req.id, 'completed')}
-                        disabled={updatingId === req.id}
-                        className="btn btn-outline btn-sm"
-                      >
-                        <Check size={14} color="#10b981" />
-                        <span>Mark Played</span>
-                      </button>
+                    {/* Completed */}
+                    {req.status === 'completed' && (
+                      <span className="badge badge-cyan" style={{ fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
+                        <CheckCircle size={14} /> COMPLETED
+                      </span>
                     )}
 
-                    {req.status !== 'declined' && req.status !== 'completed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(req.id, 'declined')}
-                        disabled={updatingId === req.id}
-                        className="btn btn-outline btn-sm"
-                        style={{ color: '#f87171' }}
-                      >
-                        <X size={14} />
-                        <span>Decline</span>
-                      </button>
+                    {/* Declined */}
+                    {req.status === 'declined' && (
+                      <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
+                        <X size={14} /> DECLINED (NOT CHARGED)
+                      </span>
                     )}
                   </div>
 
