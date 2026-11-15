@@ -1,5 +1,6 @@
 // netlify/functions/create-payment-intent.js
-// Handles Stripe PaymentIntent creation with Stripe Connect platform fees and transfers
+// Handles Stripe PaymentIntent creation with authorization hold (manual capture) for song requests
+// and automatic capture for direct tips, with Stripe Connect transfers.
 import Stripe from 'stripe';
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -36,6 +37,7 @@ export const handler = async (event) => {
       songTitle,
       fanName,
       bandId,
+      isDirectTip = false, // Direct tip = auto capture, Song request = manual capture (only charged when accepted!)
       currency = 'usd',
     } = body;
 
@@ -47,14 +49,19 @@ export const handler = async (event) => {
       const paymentIntentParams = {
         amount: amountInCents,
         currency: currency.toLowerCase(),
+        // Song requests place an authorization hold; fan is ONLY charged when band accepts!
+        capture_method: isDirectTip ? 'automatic' : 'manual',
         automatic_payment_methods: {
           enabled: true, // Enables Apple Pay, Google Pay, and Credit Cards automatically
         },
-        description: `Song Request: "${songTitle}" by ${fanName || 'Fan'}`,
+        description: isDirectTip
+          ? `Direct Musician Tip from ${fanName || 'Fan'}`
+          : `Song Request: "${songTitle}" by ${fanName || 'Fan'}`,
         metadata: {
           songTitle: songTitle || '',
           fanName: fanName || 'Anonymous Fan',
           bandId: bandId || '',
+          isDirectTip: isDirectTip ? 'true' : 'false',
           requestlyFee: (requestlyFee || 0).toString(),
         },
       };
@@ -76,14 +83,14 @@ export const handler = async (event) => {
           success: true,
           clientSecret: paymentIntent.client_secret,
           paymentIntentId: paymentIntent.id,
+          captureMethod: isDirectTip ? 'automatic' : 'manual',
           mode: 'live_stripe',
         }),
       };
     }
 
     // In demo / test mode without secret key configured:
-    // Generate verified instant confirmation so fan and band can test full flow today
-    const mockIntentId = `pi_test_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+    const mockIntentId = `pi_${isDirectTip ? 'tip' : 'hold'}_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
     return {
       statusCode: 200,
       headers,
@@ -91,6 +98,7 @@ export const handler = async (event) => {
         success: true,
         clientSecret: `${mockIntentId}_secret_test`,
         paymentIntentId: mockIntentId,
+        captureMethod: isDirectTip ? 'automatic' : 'manual',
         mode: 'test_simulation',
       }),
     };

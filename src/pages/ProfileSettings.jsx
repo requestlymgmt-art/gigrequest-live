@@ -19,12 +19,14 @@ import {
   CheckCircle2,
   ShieldCheck,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Crop
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { initiateStripeConnectOnboarding } from '../lib/stripe';
 import { uploadCoverImage } from '../cloudinary/upload';
 import { useAuth } from '../context/AuthContext';
+import ImageCropModal from '../components/common/ImageCropModal';
 import toast from 'react-hot-toast';
 
 export default function ProfileSettings() {
@@ -35,6 +37,8 @@ export default function ProfileSettings() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showManualUrl, setShowManualUrl] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageForCrop, setRawImageForCrop] = useState(null);
 
   const [formData, setFormData] = useState({
     band_name: '',
@@ -101,8 +105,8 @@ export default function ProfileSettings() {
     }
   }, [searchParams]);
 
-  // Direct device file upload for band profile picture / avatar
-  const handlePhotoFileChange = async (e) => {
+  // Direct device file upload with interactive pan/zoom crop frame
+  const handlePhotoFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -111,70 +115,34 @@ export default function ProfileSettings() {
       return;
     }
 
-    setUploadingPhoto(true);
-    setUploadProgress(15);
-    toast.loading('Uploading band photo...', { id: 'photo-upload' });
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      setRawImageForCrop(loadEvent.target.result);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+    // Clear input so selecting the same file can trigger again
+    e.target.value = '';
+  };
 
+  // Called when user finishes moving/zooming the circular frame in the crop modal
+  const handleCropComplete = async (croppedDataUrl) => {
+    setFormData((prev) => ({ ...prev, avatar_url: croppedDataUrl }));
+    toast.success('✓ Profile photo framed! Click "Save Settings" below to apply.');
+
+    // Upload optimized cropped image to Cloudinary in background if available
     try {
-      // 1. Attempt Cloudinary upload
-      const res = await uploadCoverImage(file, (progress) => {
-        setUploadProgress(progress);
+      const blob = await (await fetch(croppedDataUrl)).blob();
+      const file = new File([blob], 'band-avatar.jpg', { type: 'image/jpeg' });
+      uploadCoverImage(file).then((res) => {
+        if (res && res.url) {
+          setFormData((prev) => ({ ...prev, avatar_url: res.url }));
+        }
+      }).catch(() => {
+        // Safe fallback - croppedDataUrl already persisted
       });
-
-      if (res && res.url) {
-        setFormData((prev) => ({ ...prev, avatar_url: res.url }));
-        toast.success('Band photo uploaded successfully!', { id: 'photo-upload' });
-        setUploadingPhoto(false);
-        return;
-      }
-    } catch (err) {
-      console.debug('Cloudinary upload fallback, storing optimized client image:', err.message);
-    }
-
-    // 2. Client-side canvas compression fallback (creates high-quality 400x400 data URL)
-    try {
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 400;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            }
-          } else {
-            if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setFormData((prev) => ({ ...prev, avatar_url: compressedDataUrl }));
-          toast.success('Band photo updated!', { id: 'photo-upload' });
-          setUploadingPhoto(false);
-        };
-        img.onerror = () => {
-          toast.error('Could not process image file', { id: 'photo-upload' });
-          setUploadingPhoto(false);
-        };
-        img.src = loadEvent.target.result;
-      };
-      reader.readAsDataURL(file);
-    } catch (fallbackErr) {
-      console.error('File reading error:', fallbackErr);
-      toast.error('Failed to load photo', { id: 'photo-upload' });
-      setUploadingPhoto(false);
+    } catch (e) {
+      // Safe fallback
     }
   };
 
@@ -388,15 +356,31 @@ export default function ProfileSettings() {
                   </label>
 
                   {formData.avatar_url && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, avatar_url: '' }))}
-                      className="btn btn-outline btn-sm"
-                      style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171' }}
-                    >
-                      <Trash2 size={14} />
-                      <span>Remove</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRawImageForCrop(formData.avatar_url);
+                          setCropModalOpen(true);
+                        }}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }}
+                        title="Move & Zoom Crop Frame"
+                      >
+                        <Crop size={14} />
+                        <span>Move & Zoom Frame</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, avatar_url: '' }))}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171' }}
+                      >
+                        <Trash2 size={14} />
+                        <span>Remove</span>
+                      </button>
+                    </>
                   )}
 
                   <button
@@ -774,6 +758,15 @@ export default function ProfileSettings() {
           </button>
         </div>
       </form>
+
+      {/* Interactive Pan & Zoom Image Crop Modal */}
+      <ImageCropModal
+        isOpen={cropModalOpen}
+        imageSrc={rawImageForCrop}
+        onClose={() => setCropModalOpen(false)}
+        onCrop={handleCropComplete}
+        title="Move & Zoom Profile Picture"
+      />
     </div>
   );
 }

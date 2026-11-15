@@ -200,7 +200,7 @@ export default function FanLivePage() {
     setProcessingPayment(true);
     setProcessingMethod(method);
     try {
-      // 1. Process Stripe with transparent breakdown
+      // 1. Process Stripe with authorization hold (only charged if band accepts!)
       const paymentResult = await processStripePayment({
         amount: breakdown.subtotal,
         fanFee: breakdown.fanFee,
@@ -212,10 +212,11 @@ export default function FanLivePage() {
         songTitle,
         fanName: fanName.trim() || 'Anonymous Fan',
         fanMessage: fanMessage.trim(),
+        isDirectTip: false,
         paymentMethod: method,
       });
 
-      // 2. Insert into Supabase requests table
+      // 2. Insert into Supabase requests table with payment_status = 'authorized'
       const { data: newRequest, error: reqError } = await supabase
         .from('requests')
         .insert({
@@ -230,7 +231,7 @@ export default function FanLivePage() {
           fan_fee: breakdown.fanFee,
           total_paid: breakdown.totalCharged,
           status: 'pending',
-          payment_status: 'paid',
+          payment_status: paymentResult.status || 'authorized', // Authorization hold!
           payment_method: method,
           stripe_payment_id: paymentResult.paymentIntentId,
         })
@@ -247,7 +248,7 @@ export default function FanLivePage() {
       });
 
       const label = method === 'apple_pay' ? 'Apple Pay' : method === 'google_pay' ? 'Google Pay' : 'Card';
-      toast.success(`${label} payment confirmed! Your request is on the band's screen!`);
+      toast.success(`${label} authorized! You will only be charged when the band accepts your request!`);
       setActiveRequestTrack(newRequest);
       setSelectedSong(null);
       setIsCustomRequest(false);
@@ -260,7 +261,7 @@ export default function FanLivePage() {
     }
   };
 
-  // Direct Tip Submission
+  // Direct Tip Submission (Captured immediately since it's a voluntary gift to the band)
   const handlePayDirectTip = async (e, chosenMethod = null) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!band) return;
@@ -283,6 +284,7 @@ export default function FanLivePage() {
         songTitle: 'Direct Musician Tip 💖',
         fanName: fanName.trim() || 'Generous Fan',
         fanMessage: fanMessage.trim(),
+        isDirectTip: true,
         paymentMethod: method,
       });
 
@@ -557,7 +559,7 @@ export default function FanLivePage() {
                   transition: 'transform 0.15s ease, border-color 0.15s ease',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                   <SongArtwork
                     title={song.title}
                     artist={song.artist}
@@ -567,13 +569,16 @@ export default function FanLivePage() {
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h4 style={{
-                      fontSize: '1.02rem',
+                      fontSize: '1rem',
                       color: '#fff',
                       fontWeight: 700,
-                      marginBottom: '0.15rem',
-                      whiteSpace: 'nowrap',
+                      marginBottom: '0.2rem',
+                      lineHeight: 1.25,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      wordBreak: 'break-word',
                     }}>
                       {song.title}
                     </h4>
@@ -582,32 +587,35 @@ export default function FanLivePage() {
                       color: 'var(--text-muted)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.45rem',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      flexWrap: 'wrap',
+                      gap: '0.35rem',
+                      rowGap: '0.15rem',
+                      lineHeight: 1.3,
                     }}>
-                      <span>{song.artist}</span>
+                      <span style={{ fontWeight: 500 }}>{song.artist}</span>
                       <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
-                  <span style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 800,
-                    color: '#34d399',
-                    background: 'rgba(16, 185, 129, 0.12)',
-                    padding: '0.35rem 0.65rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(16, 185, 129, 0.25)'
-                  }}>
-                    ${price.toFixed(2)}
-                  </span>
-                  <div className="btn btn-primary btn-sm" style={{ padding: '0.4rem 0.75rem' }}>
-                    <span>Request</span>
-                    <ChevronRight size={14} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: '0.35rem' }}>
+                  <div
+                    className="btn btn-primary btn-sm"
+                    style={{
+                      padding: '0.45rem 0.75rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      whiteSpace: 'nowrap',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      fontSize: '0.88rem',
+                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.35)'
+                    }}
+                  >
+                    <span>${price.toFixed(2)}</span>
+                    <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 600 }}>• Request</span>
+                    <ChevronRight size={13} />
                   </div>
                 </div>
               </div>
@@ -813,15 +821,20 @@ export default function FanLivePage() {
                 </div>
 
                 <div style={{
-                  fontSize: '0.725rem',
-                  color: '#94a3b8',
-                  marginTop: '0.65rem',
+                  fontSize: '0.74rem',
+                  color: '#93c5fd',
+                  marginTop: '0.75rem',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
+                  alignItems: 'flex-start',
+                  gap: '0.45rem',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  lineHeight: 1.4
                 }}>
-                  <ShieldCheck size={14} color="#10b981" />
-                  <span>100% of song & tip goes to musicians. Fan covers transparent fees.</span>
+                  <ShieldCheck size={16} color="#60a5fa" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span><strong>Zero-Risk Pre-Authorization:</strong> Your payment is held and will ONLY be charged when the band accepts your request. If rejected, the hold is released immediately with $0 charged.</span>
                 </div>
               </div>
 

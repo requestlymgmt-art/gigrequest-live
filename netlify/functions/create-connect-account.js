@@ -23,7 +23,7 @@ export const handler = async (event) => {
     const { bandId, bandName, email, returnUrl } = body;
 
     if (stripe && process.env.STRIPE_SECRET_KEY) {
-      // 1. Create standard Stripe Express account for the band
+      // 1. Create standard Stripe Express account for the band with standard 2-business-day rolling payouts
       const account = await stripe.accounts.create({
         type: 'express',
         country: 'US',
@@ -35,6 +35,14 @@ export const handler = async (event) => {
         business_profile: {
           name: bandName || 'Musician / Live Band',
           mcc: '7929', // Bands, Orchestras, and Miscellaneous Entertainers
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'daily',
+              delay_days: 2, // Standard 2-business-day rolling bank payouts
+            },
+          },
         },
         metadata: {
           bandId: bandId || '',

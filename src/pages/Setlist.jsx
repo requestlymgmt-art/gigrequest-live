@@ -23,8 +23,13 @@ import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
 import SongGenreBadge from '../components/common/SongGenreBadge';
-import { getSongMetadata, getSongGenre } from '../utils/artwork';
+import { getSongMetadata, getSongGenre, searchSongSuggestions } from '../utils/artwork';
 import toast from 'react-hot-toast';
+
+const POPULAR_GENRES = [
+  'Rock', 'Pop', 'Country', 'R&B / Soul', 'Hip-Hop', 
+  'Jazz', 'Blues', 'Latin', 'Funk', 'Reggae', 'Acoustic', 'Folk', 'Alternative'
+];
 
 export default function Setlist() {
   const { profile, bandId, isDemoMode } = useAuth();
@@ -52,6 +57,57 @@ export default function Setlist() {
   const [autoDetectedGenre, setAutoDetectedGenre] = useState('');
   const [detectedMeta, setDetectedMeta] = useState(null);
   const [enrichingAllGenres, setEnrichingAllGenres] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isEditingGenre, setIsEditingGenre] = useState(false);
+
+  // Debounced live catalog suggestions while typing song title
+  useEffect(() => {
+    if (!showAddModal || !formData.title || formData.title.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const timer = setTimeout(async () => {
+      setLoadingSuggestions(true);
+      try {
+        const results = await searchSongSuggestions(formData.title.trim(), 5);
+        if (isCurrent) {
+          setSuggestions(results);
+          // Show suggestions only if user is actively searching
+          setShowSuggestions(results && results.length > 0);
+        }
+      } catch (err) {
+        // silent fallback
+      } finally {
+        if (isCurrent) setLoadingSuggestions(false);
+      }
+    }, 250);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [formData.title, showAddModal]);
+
+  // Tapping a suggestion fills title, ORIGINAL artist, and genre (never band name!)
+  const handleSelectSuggestion = (item) => {
+    setFormData((prev) => ({
+      ...prev,
+      title: item.title,
+      artist: item.artist, // Original artist!
+      genre: item.genre || prev.genre || 'Pop',
+    }));
+    setAutoDetectedGenre(item.genre || '');
+    setDetectedMeta(item);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setIsEditingGenre(false);
+  };
 
   // Debounced live catalog search while typing title or artist in modal
   useEffect(() => {
@@ -213,7 +269,7 @@ export default function Setlist() {
       const newSong = {
         band_id: effectiveBandId,
         title: formData.title.trim(),
-        artist: formData.artist.trim() || profile?.band_name || 'Cover',
+        artist: formData.artist.trim() || 'Original',
         genre: resolvedGenre,
         price: priceNum,
         note: formData.note.trim(),
@@ -234,6 +290,9 @@ export default function Setlist() {
         setFormData({ title: '', artist: '', genre: '', price: '5.00', note: '' });
         setAutoDetectedGenre('');
         setDetectedMeta(null);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setIsEditingGenre(false);
         return;
       }
 
@@ -258,6 +317,9 @@ export default function Setlist() {
         setFormData({ title: '', artist: '', genre: '', price: '5.00', note: '' });
         setAutoDetectedGenre('');
         setDetectedMeta(null);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setIsEditingGenre(false);
         return;
       }
 
@@ -267,6 +329,9 @@ export default function Setlist() {
       setFormData({ title: '', artist: '', genre: '', price: '5.00', note: '' });
       setAutoDetectedGenre('');
       setDetectedMeta(null);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setIsEditingGenre(false);
     } catch (err) {
       console.error('Add song error:', err);
       toast.error(err.message || 'Failed to add song');
@@ -348,7 +413,7 @@ export default function Setlist() {
         // Title - Artist - $Price
         // Title - Artist
         let title = '';
-        let artist = profile?.band_name || 'Cover';
+        let artist = 'Original';
         let genre = 'Live Cover';
         let price = 5.00;
 
@@ -761,24 +826,150 @@ export default function Setlist() {
             </div>
 
             <form onSubmit={handleAddSong}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="label">Song Title *</label>
+              {/* Song Title with Live Auto-Suggestions Dropdown */}
+              <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label className="label" style={{ marginBottom: 0 }}>Song Title *</label>
+                  {loadingSuggestions ? (
+                    <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Searching songs...</span>
+                  ) : suggestions.length > 0 && showSuggestions ? (
+                    <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 600 }}>Tap a song below to auto-fill</span>
+                  ) : null}
+                </div>
                 <input
                   type="text"
                   placeholder="e.g. Valerie, Tennessee Whiskey, Superstition"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  onBlur={() => triggerAutoGenre(formData.title, formData.artist)}
+                  onChange={(e) => {
+                    setFormData({ ...formData, title: e.target.value });
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowSuggestions(true);
+                  }}
                   className="input-field"
                   required
+                  autoComplete="off"
                 />
+
+                {/* Suggestions Dropdown List */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 60,
+                    background: '#0b1120',
+                    border: '1px solid rgba(59, 130, 246, 0.45)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                    marginTop: '6px',
+                    maxHeight: '260px',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{
+                      padding: '0.45rem 0.75rem',
+                      fontSize: '0.72rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: '#60a5fa',
+                      fontWeight: 700,
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>Auto-fill Title, Original Artist & Genre:</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSuggestions(false)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+
+                    {suggestions.map((item, i) => (
+                      <div
+                        key={i}
+                        onClick={() => handleSelectSuggestion(item)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.65rem 0.85rem',
+                          cursor: 'pointer',
+                          borderBottom: i < suggestions.length - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.18)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {item.artworkUrl ? (
+                          <img
+                            src={item.artworkUrl}
+                            alt={item.title}
+                            style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '6px',
+                            background: 'rgba(59, 130, 246, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <Music2 size={18} color="#60a5fa" />
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: '#fff',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {item.title}
+                          </div>
+                          <div style={{
+                            fontSize: '0.78rem',
+                            color: 'var(--text-muted)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            Original Artist: <strong style={{ color: '#93c5fd' }}>{item.artist}</strong>
+                          </div>
+                        </div>
+
+                        {item.genre && (
+                          <span className="badge badge-blue" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', flexShrink: 0 }}>
+                            {item.genre}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="label">Original Artist / Band</label>
+              {/* Original Artist / Band Field */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label className="label" style={{ marginBottom: 0 }}>Original Artist / Band</label>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>e.g. Stevie Wonder (Never your band name)</span>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. Stevie Wonder, Amy Winehouse"
+                  placeholder="Original Artist (or leave as Original for custom songs)"
                   value={formData.artist}
                   onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
                   onBlur={() => triggerAutoGenre(formData.title, formData.artist)}
@@ -796,7 +987,7 @@ export default function Setlist() {
                   background: 'rgba(59, 130, 246, 0.08)',
                   border: '1px solid rgba(59, 130, 246, 0.3)',
                   borderRadius: 'var(--radius-md)',
-                  marginBottom: '1rem',
+                  marginBottom: '1.25rem',
                   animation: 'fadeIn 0.2s ease-in-out'
                 }}>
                   {detectedMeta.artworkUrl ? (
@@ -835,22 +1026,45 @@ export default function Setlist() {
                       {detectedMeta.title}
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {detectedMeta.artist} {detectedMeta.album ? `• ${detectedMeta.album}` : ''}
+                      by <strong style={{ color: '#fff' }}>{detectedMeta.artist || detectedMeta.artistName}</strong> {detectedMeta.album ? `• ${detectedMeta.album}` : ''}
                     </div>
                   </div>
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              {/* Genre & Price row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label className="label" style={{ marginBottom: 0 }}>Genre *</label>
-                    {detectingGenre ? (
-                      <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Detecting...</span>
-                    ) : autoDetectedGenre ? (
-                      <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700 }}>✓ Auto-Detected</span>
-                    ) : null}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      {detectingGenre && (
+                        <span style={{ fontSize: '0.7rem', color: '#60a5fa' }}>Detecting...</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingGenre((prev) => !prev)}
+                        style={{
+                          background: isEditingGenre ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(59, 130, 246, 0.4)',
+                          borderRadius: '6px',
+                          color: '#60a5fa',
+                          fontSize: '0.72rem',
+                          padding: '0.15rem 0.45rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontWeight: 700
+                        }}
+                        title="Click to quickly pick or change genre"
+                      >
+                        <Edit3 size={11} />
+                        <span>{isEditingGenre ? 'Hide Picker' : 'Edit Genre'}</span>
+                      </button>
+                    </div>
                   </div>
+
                   <input
                     type="text"
                     placeholder="e.g. Rock, Soul, Country"
@@ -858,7 +1072,49 @@ export default function Setlist() {
                     onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
                     className="input-field"
                   />
-                  {autoDetectedGenre && (
+
+                  {/* Quick-Pick Genre Buttons Palette when 'Edit' is active */}
+                  {isEditingGenre && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.65rem',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: 'var(--radius-md)',
+                      animation: 'fadeIn 0.15s ease-in-out'
+                    }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.4rem' }}>
+                        Click to set genre:
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {POPULAR_GENRES.map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, genre: g }));
+                              setAutoDetectedGenre(g);
+                            }}
+                            style={{
+                              padding: '0.2rem 0.55rem',
+                              fontSize: '0.72rem',
+                              borderRadius: '9999px',
+                              border: '1px solid',
+                              borderColor: formData.genre === g ? 'var(--accent-blue)' : 'rgba(255, 255, 255, 0.1)',
+                              background: formData.genre === g ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.04)',
+                              color: formData.genre === g ? '#fff' : 'var(--text-muted)',
+                              cursor: 'pointer',
+                              fontWeight: formData.genre === g ? 700 : 500
+                            }}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {autoDetectedGenre && !isEditingGenre && (
                     <span style={{ fontSize: '0.725rem', color: '#34d399', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <CheckCircle2 size={12} /> Auto-detected as <strong>{autoDetectedGenre}</strong>
                     </span>

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { captureStripePayment, cancelStripePayment } from '../lib/stripe';
 import SongArtwork from '../components/common/SongArtwork';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
@@ -120,13 +121,30 @@ export default function Dashboard() {
     };
   }, [effectiveBandId]);
 
-  // Update request status
+  // Update request status with automatic payment capture on accept and hold cancellation on decline
   const handleUpdateStatus = async (requestId, newStatus) => {
     setUpdatingId(requestId);
     try {
+      const targetReq = requests.find((r) => r.id === requestId);
       const updates = { status: newStatus };
       if (newStatus === 'playing') {
         updates.played_at = new Date().toISOString();
+      }
+
+      // If accepting (playing or up_next), capture the pre-authorized hold so fan is charged!
+      if ((newStatus === 'playing' || newStatus === 'up_next') && targetReq?.payment_status === 'authorized') {
+        if (targetReq.stripe_payment_id) {
+          await captureStripePayment(targetReq.stripe_payment_id);
+        }
+        updates.payment_status = 'paid';
+      }
+
+      // If declining/rejecting, release authorization hold immediately so fan is NEVER charged!
+      if (newStatus === 'declined' && targetReq?.payment_status === 'authorized') {
+        if (targetReq.stripe_payment_id) {
+          await cancelStripePayment(targetReq.stripe_payment_id);
+        }
+        updates.payment_status = 'cancelled';
       }
 
       const { error } = await supabase
@@ -141,11 +159,11 @@ export default function Dashboard() {
       );
 
       if (newStatus === 'playing') {
-        toast('🎸 Now Playing!', { icon: '🔥' });
+        toast('🎸 Now Playing! Payment captured.', { icon: '🔥' });
       } else if (newStatus === 'completed') {
         toast.success('Marked as played!');
       } else if (newStatus === 'declined') {
-        toast('Request declined', { icon: '✕' });
+        toast('Request declined. Fan was not charged (hold released).', { icon: 'ℹ️' });
       }
     } catch (err) {
       toast.error('Failed to update status');
@@ -534,13 +552,17 @@ export default function Dashboard() {
                     <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#34d399' }}>
                       +${netAmount.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
-                      {req.payment_method === 'apple_pay' ? (
-                        <span> Apple Pay ✓</span>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                      {req.payment_status === 'authorized' ? (
+                        <span style={{ color: '#60a5fa' }}>Pre-Authorized Hold ⏳</span>
+                      ) : req.payment_status === 'cancelled' ? (
+                        <span style={{ color: '#f87171' }}>Not Charged (Released) ✕</span>
+                      ) : req.payment_method === 'apple_pay' ? (
+                        <span style={{ color: '#10b981' }}> Apple Pay ✓</span>
                       ) : req.payment_method === 'google_pay' ? (
-                        <span>G Pay ✓</span>
+                        <span style={{ color: '#10b981' }}>G Pay ✓</span>
                       ) : (
-                        <span>Card Paid ✓</span>
+                        <span style={{ color: '#10b981' }}>Card Paid ✓</span>
                       )}
                     </div>
                   </div>

@@ -14,6 +14,7 @@ import {
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
+import { captureStripePayment } from '../lib/stripe';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -86,14 +87,28 @@ export default function StageMode() {
 
   const handleStartPlaying = async (reqId) => {
     try {
+      const targetReq = requests.find((r) => r.id === reqId);
+      const updates = { 
+        status: 'playing', 
+        played_at: new Date().toISOString() 
+      };
+
+      // Capture pre-authorized hold when band starts playing song
+      if (targetReq?.payment_status === 'authorized') {
+        if (targetReq.stripe_payment_id) {
+          await captureStripePayment(targetReq.stripe_payment_id);
+        }
+        updates.payment_status = 'paid';
+      }
+
       const { error } = await supabase
         .from('requests')
-        .update({ status: 'playing', played_at: new Date().toISOString() })
+        .update(updates)
         .eq('id', reqId);
 
       if (error) throw error;
 
-      toast('🎸 Now Playing on Stage!', { icon: '🔥' });
+      toast('🎸 Now Playing on Stage! Payment captured.', { icon: '🔥' });
       fetchLiveQueue();
     } catch (err) {
       toast.error('Could not start song');

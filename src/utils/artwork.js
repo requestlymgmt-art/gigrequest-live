@@ -104,6 +104,44 @@ export async function getSongMetadata(title, artist) {
 }
 
 /**
+ * Searches iTunes for song suggestions matching a search term.
+ * Returns up to `limit` suggestions with:
+ * { title, artist, genre, artworkUrl, albumTitle }
+ */
+export async function searchSongSuggestions(term, limit = 5) {
+  if (!term || term.trim().length < 2) return [];
+
+  const query = cleanSearchQuery(term);
+  if (!query) return [];
+
+  try {
+    const endpoint = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=${limit}`;
+    const response = await fetch(endpoint);
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    if (!data.results) return [];
+
+    return data.results.map((result) => {
+      const artworkUrl = result.artworkUrl100
+        ? result.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg')
+        : null;
+
+      return {
+        title: result.trackName || term,
+        artist: result.artistName || '',
+        genre: result.primaryGenreName || 'Pop',
+        albumTitle: result.collectionName || '',
+        artworkUrl,
+      };
+    });
+  } catch (err) {
+    console.debug('Song suggestions search failed:', err.message);
+    return [];
+  }
+}
+
+/**
  * Resolves high-resolution album/artist artwork for a given song title & artist.
  * Returns null if not found or on network failure.
  */

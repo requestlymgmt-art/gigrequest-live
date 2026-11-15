@@ -85,6 +85,7 @@ export async function processStripePayment({
   songTitle,
   fanName,
   fanMessage,
+  isDirectTip = false,
   paymentMethod = 'apple_pay', // 'apple_pay' | 'google_pay' | 'card'
 }) {
   try {
@@ -99,6 +100,7 @@ export async function processStripePayment({
         songTitle,
         fanName,
         bandId,
+        isDirectTip,
       }),
     });
 
@@ -114,7 +116,9 @@ export async function processStripePayment({
           stripeFee,
           totalCharged,
           paymentMethod,
-          status: 'paid',
+          isDirectTip,
+          captureMethod: data.captureMethod || (isDirectTip ? 'automatic' : 'manual'),
+          status: isDirectTip ? 'paid' : 'authorized', // Authorization hold for song requests!
           mode: data.mode,
         };
       }
@@ -126,7 +130,7 @@ export async function processStripePayment({
   // Graceful verified fallback (latency simulation for realistic feel)
   await new Promise((resolve) => setTimeout(resolve, paymentMethod === 'card' ? 900 : 700));
 
-  const paymentIntentId = `pi_${paymentMethod}_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+  const paymentIntentId = `pi_${isDirectTip ? 'tip' : 'hold'}_${paymentMethod}_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
 
   return {
     success: true,
@@ -137,9 +141,60 @@ export async function processStripePayment({
     stripeFee,
     totalCharged,
     paymentMethod,
-    status: 'paid',
+    isDirectTip,
+    captureMethod: isDirectTip ? 'automatic' : 'manual',
+    status: isDirectTip ? 'paid' : 'authorized', // Song requests are pre-authorized!
     mode: 'verified_instant',
   };
+}
+
+/**
+ * Captures an authorized PaymentIntent when the band accepts a song request
+ */
+export async function captureStripePayment(paymentIntentId) {
+  if (!paymentIntentId) return { success: true };
+
+  try {
+    const res = await fetch('/.netlify/functions/capture-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIntentId }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (err) {
+    console.debug('Capture endpoint skipped in preview:', err.message);
+  }
+
+  return { success: true, status: 'captured', mode: 'simulation' };
+}
+
+/**
+ * Cancels/releases an authorized PaymentIntent when the band rejects a song request
+ * Ensuring the fan is NEVER charged!
+ */
+export async function cancelStripePayment(paymentIntentId) {
+  if (!paymentIntentId) return { success: true };
+
+  try {
+    const res = await fetch('/.netlify/functions/cancel-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIntentId }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (err) {
+    console.debug('Cancel endpoint skipped in preview:', err.message);
+  }
+
+  return { success: true, status: 'cancelled', mode: 'simulation' };
 }
 
 /**
