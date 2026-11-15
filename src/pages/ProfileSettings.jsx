@@ -186,12 +186,12 @@ export default function ProfileSettings() {
       if (res?.needsPlatformProfile) {
         setStripeProfileNotice(true);
         toast((t) => (
-          <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
             <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.35rem' }}>
               One-Time Stripe Connect Platform Setup:
             </strong>
             <p style={{ margin: '0 0 0.65rem', color: '#cbd5e1' }}>
-              Stripe requires you to answer a 1-minute platform questionnaire at dashboard.stripe.com/connect/accounts/overview before creating live connected accounts.
+              Stripe requires you to answer a 1-minute platform questionnaire on your Stripe dashboard before creating live connected accounts.
             </p>
             <a
               href="https://dashboard.stripe.com/connect/accounts/overview"
@@ -903,26 +903,44 @@ export default function ProfileSettings() {
                 background: 'rgba(59, 130, 246, 0.08)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
                 borderRadius: 'var(--radius-md)',
-                padding: '1rem 1.25rem',
+                padding: '1.15rem',
                 marginTop: '1.5rem',
-                textAlign: 'left'
+                textAlign: 'left',
+                overflow: 'hidden',
+                boxSizing: 'border-box',
+                width: '100%'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                  <Sparkles size={16} color="#60a5fa" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+                  <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
                   <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>
-                    Stripe Live Connect Setup Note
+                    Stripe Live Connect Setup
                   </strong>
                 </div>
-                <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 0.75rem' }}>
-                  To enable 1-click bank onboarding links, Stripe requires the platform owner to complete a quick 1-minute questionnaire on <strong>dashboard.stripe.com/connect/accounts/overview</strong>. Once answered in Stripe, onboarding links work seamlessly for all musicians!
+                <p style={{
+                  fontSize: '0.825rem',
+                  color: '#cbd5e1',
+                  lineHeight: 1.55,
+                  margin: '0 0 0.85rem',
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word'
+                }}>
+                  To enable 1-click bank onboarding links, Stripe requires the platform owner to answer a quick 1-minute questionnaire on the Stripe dashboard. Once answered, onboarding links work seamlessly for all musicians!
                 </p>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%' }}>
                   <a
                     href="https://dashboard.stripe.com/connect/accounts/overview"
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-primary btn-sm"
-                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', textDecoration: 'none' }}
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '0.6rem 0.85rem',
+                      textDecoration: 'none',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      width: '100%',
+                      fontWeight: 700
+                    }}
                   >
                     <span>Open Stripe Connect Questionnaire &rarr;</span>
                   </a>
@@ -930,32 +948,38 @@ export default function ProfileSettings() {
                     type="button"
                     onClick={() => setShowManualStripe(!showManualStripe)}
                     className="btn btn-outline btn-sm"
-                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                    style={{
+                      fontSize: '0.82rem',
+                      padding: '0.55rem 0.85rem',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      width: '100%'
+                    }}
                   >
-                    <span>{showManualStripe ? 'Hide Manual ID' : 'Or Enter Existing Stripe Account ID'}</span>
+                    <span>{showManualStripe ? 'Hide Manual ID Field' : 'Or Enter Existing Stripe Account ID'}</span>
                   </button>
                 </div>
 
                 {showManualStripe && (
-                  <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <label className="label" style={{ fontSize: '0.78rem', marginBottom: '0.35rem' }}>
+                  <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }}>
+                    <label className="label" style={{ fontSize: '0.78rem', marginBottom: '0.4rem' }}>
                       Have an existing Stripe Express Account ID? Enter here:
                     </label>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
                       <input
                         type="text"
                         placeholder="acct_1..."
                         value={manualStripeId}
                         onChange={(e) => setManualStripeId(e.target.value)}
                         className="input-field"
-                        style={{ flex: '1 1 220px', fontSize: '0.85rem' }}
+                        style={{ fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
                       />
                       <button
                         type="button"
                         disabled={linkingManual}
                         onClick={handleManualLinkStripe}
                         className="btn btn-emerald btn-sm"
-                        style={{ fontWeight: 700 }}
+                        style={{ fontWeight: 700, padding: '0.55rem', width: '100%', justifyContent: 'center' }}
                       >
                         {linkingManual ? 'Linking...' : 'Link Account'}
                       </button>
