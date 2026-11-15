@@ -118,9 +118,10 @@ export const handler = async (event) => {
       body: JSON.stringify({
         success: false,
         needsPlatformProfile: isProfileNotice,
-        dashboardUrl: 'https://dashboard.stripe.com/connect/accounts/overview',
+        dashboardUrl: 'https://dashboard.stripe.com/settings/connect',
+        verificationUrl: 'https://dashboard.stripe.com/settings/verifications',
         error: isProfileNotice
-          ? 'Please complete your 1-minute platform profile at dashboard.stripe.com/connect/accounts/overview to enable live onboarding.'
+          ? 'Please complete your 1-minute platform profile at dashboard.stripe.com/settings/connect to enable live onboarding.'
           : (err.message || 'Failed to create Connect account'),
       }),
     };

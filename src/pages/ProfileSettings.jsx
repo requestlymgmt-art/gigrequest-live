@@ -191,17 +191,28 @@ export default function ProfileSettings() {
               One-Time Stripe Connect Platform Setup:
             </strong>
             <p style={{ margin: '0 0 0.65rem', color: '#cbd5e1' }}>
-              Stripe requires you to answer a 1-minute platform questionnaire on your Stripe dashboard before creating live connected accounts.
+              Stripe requires the platform owner to complete a quick 1-minute questionnaire before issuing live musician onboarding links.
             </p>
-            <a
-              href="https://dashboard.stripe.com/connect/accounts/overview"
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-primary btn-sm"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
-            >
-              Open Stripe Connect Setup &rarr;
-            </a>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <a
+                href="https://dashboard.stripe.com/settings/connect"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-primary btn-sm"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', textDecoration: 'none' }}
+              >
+                Open Mobile Settings &rarr;
+              </a>
+              <a
+                href="https://apps.apple.com/app/stripe-dashboard/id396071430"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', textDecoration: 'none' }}
+              >
+                Stripe iOS App 📱
+              </a>
+            </div>
           </div>
         ), { duration: 15000, icon: '⚠️' });
         return;
@@ -903,7 +914,7 @@ export default function ProfileSettings() {
                 background: 'rgba(59, 130, 246, 0.08)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
                 borderRadius: 'var(--radius-md)',
-                padding: '1.15rem',
+                padding: '1.25rem',
                 marginTop: '1.5rem',
                 textAlign: 'left',
                 overflow: 'hidden',
@@ -912,10 +923,24 @@ export default function ProfileSettings() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
                   <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
-                  <strong style={{ color: '#60a5fa', fontSize: '0.92rem' }}>
-                    Stripe Live Connect Setup
+                  <strong style={{ color: '#60a5fa', fontSize: '0.95rem' }}>
+                    Stripe Live Connect Platform Setup
                   </strong>
                 </div>
+
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '0.85rem',
+                  fontSize: '0.8rem',
+                  color: '#34d399',
+                  lineHeight: 1.45
+                }}>
+                  📱 <strong>Musician Phone Onboarding:</strong> When musicians tap &ldquo;Connect Bank Account&rdquo;, they are routed to Stripe&rsquo;s lightweight Express mobile portal (<code>connect.stripe.com</code>), which is purpose-built for fast, crash-free phone uploads on iPhone and Android.
+                </div>
+
                 <p style={{
                   fontSize: '0.825rem',
                   color: '#cbd5e1',
@@ -924,17 +949,19 @@ export default function ProfileSettings() {
                   overflowWrap: 'anywhere',
                   wordBreak: 'break-word'
                 }}>
-                  To enable 1-click bank onboarding links, Stripe requires the platform owner to answer a quick 1-minute questionnaire on the Stripe dashboard. Once answered, onboarding links work seamlessly for all musicians!
+                  To activate live musician payouts, Stripe requires the platform owner to complete a 1-minute profile questionnaire and verify business/identity documents once.
                 </p>
+
+                {/* Mobile-Safe Action Buttons for Platform Owner */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%' }}>
                   <a
-                    href="https://dashboard.stripe.com/connect/accounts/overview"
+                    href="https://dashboard.stripe.com/settings/connect"
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-primary btn-sm"
                     style={{
                       fontSize: '0.82rem',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       textDecoration: 'none',
                       justifyContent: 'center',
                       textAlign: 'center',
@@ -942,11 +969,59 @@ export default function ProfileSettings() {
                       fontWeight: 700
                     }}
                   >
-                    <span>Open Stripe Connect Questionnaire &rarr;</span>
+                    <span>1. Open Mobile Settings (Fast & Lightweight) &rarr;</span>
                   </a>
-                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', textAlign: 'center', lineHeight: 1.4, margin: '0.1rem 0 0.2rem' }}>
-                    💡 <em>Tip: Open on a computer/laptop (or Chrome) for smooth document uploads — mobile Safari often crashes on heavy document upload pages.</em>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', width: '100%' }}>
+                    <a
+                      href="https://dashboard.stripe.com/settings/verifications"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '0.55rem 0.75rem',
+                        textDecoration: 'none',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        borderColor: 'rgba(59, 130, 246, 0.4)',
+                        color: '#60a5fa'
+                      }}
+                    >
+                      <span>Upload Documents / ID &rarr;</span>
+                    </a>
+
+                    <a
+                      href="https://apps.apple.com/app/stripe-dashboard/id396071430"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '0.55rem 0.75rem',
+                        textDecoration: 'none',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        borderColor: 'rgba(16, 185, 129, 0.4)',
+                        color: '#34d399'
+                      }}
+                    >
+                      <span>Official Stripe iOS App 📱</span>
+                    </a>
                   </div>
+
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#94a3b8',
+                    lineHeight: 1.45,
+                    margin: '0.2rem 0',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-sm)'
+                  }}>
+                    💡 <strong>Why did Safari glitch?</strong> The desktop admin dashboard (<code>dashboard.stripe.com/connect/accounts</code>) is heavy and exceeds Safari&rsquo;s phone memory limit during camera uploads. Using the <strong>Stripe iOS App</strong> (native camera), the <strong>Mobile Settings link</strong> above, or a laptop browser prevents any crash!
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setShowManualStripe(!showManualStripe)}
