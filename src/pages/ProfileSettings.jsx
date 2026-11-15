@@ -944,6 +944,9 @@ export default function ProfileSettings() {
                   >
                     <span>Open Stripe Connect Questionnaire &rarr;</span>
                   </a>
+                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', textAlign: 'center', lineHeight: 1.4, margin: '0.1rem 0 0.2rem' }}>
+                    💡 <em>Tip: Open on a computer/laptop (or Chrome) for smooth document uploads — mobile Safari often crashes on heavy document upload pages.</em>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setShowManualStripe(!showManualStripe)}
