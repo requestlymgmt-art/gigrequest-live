@@ -1,5 +1,6 @@
 // src/components/common/AlphabetFastScroll.jsx
 // Fast alphabetical scroller for jumping smoothly through song lists
+// Only appears when viewing the song list; stays hidden above so it doesn't intrude into the profile/bio card
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 export default function AlphabetFastScroll({
@@ -7,9 +8,11 @@ export default function AlphabetFastScroll({
   side = 'left',
   offset = 120, // Offset for sticky navbar / search bar
   minSongs = 5,  // Only show if list has enough songs to warrant fast scrolling
+  containerId = null,
 }) {
   const [activeLetter, setActiveLetter] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const hideTimerRef = useRef(null);
   const stripRef = useRef(null);
   const lastScrolledLetterRef = useRef(null);
@@ -38,6 +41,38 @@ export default function AlphabetFastScroll({
 
     return arr;
   }, [songs, minSongs]);
+
+  // Track scroll position so cursor is ONLY visible while browsing the song list
+  // It stays completely hidden when the user is viewing the hero/bio section above
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = containerId
+        ? document.getElementById(containerId)
+        : document.querySelector('[data-letter-group]')?.closest('[style*="paddingLeft"]') || document.querySelector('[data-letter-group]');
+
+      if (!container) {
+        setIsVisible(false);
+        return;
+      }
+
+      const rect = container.getBoundingClientRect();
+      const vh = window.innerHeight;
+
+      // The cursor sits at vertical center (top: 50% = vh * 0.5)
+      // Active ONLY when the song list covers the vertical viewing area
+      // When user is scrolled to top (bio/hero profile card), rect.top > vh * 0.4, so inView is false!
+      const inView = rect.top <= vh * 0.42 && rect.bottom >= vh * 0.22;
+      setIsVisible(inView);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [containerId, songs]);
 
   // Scroll to the first song matching the selected letter
   const scrollToLetter = useCallback((letter, instant = false) => {
@@ -135,18 +170,21 @@ export default function AlphabetFastScroll({
           position: 'fixed',
           [side]: '4px',
           top: '50%',
-          transform: 'translateY(-50%)',
+          transform: isVisible ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.85)',
+          opacity: isVisible ? 1 : 0,
+          pointerEvents: isVisible ? 'auto' : 'none',
+          transition: 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           zIndex: 80,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '1px',
-          background: 'rgba(11, 15, 25, 0.75)',
+          background: 'rgba(11, 15, 25, 0.8)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
+          boxShadow: '0 4px 18px rgba(0, 0, 0, 0.5)',
           borderRadius: '16px',
           padding: '6px 3px',
           touchAction: 'none',
@@ -163,7 +201,7 @@ export default function AlphabetFastScroll({
               onClick={() => scrollToLetter(char, false)}
               style={{
                 background: isActive ? '#3b82f6' : 'transparent',
-                color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)',
+                color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
                 border: 'none',
                 borderRadius: '6px',
                 width: '18px',
@@ -189,7 +227,7 @@ export default function AlphabetFastScroll({
       </div>
 
       {/* Floating Magnifying Letter Bubble */}
-      {activeLetter && (
+      {activeLetter && isVisible && (
         <div
           style={{
             position: 'fixed',

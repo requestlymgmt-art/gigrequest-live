@@ -188,29 +188,20 @@ export default function ProfileSettings() {
         toast((t) => (
           <div style={{ fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
             <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.35rem' }}>
-              One-Time Stripe Connect Platform Setup:
+              Platform Owner Action Required:
             </strong>
             <p style={{ margin: '0 0 0.65rem', color: '#cbd5e1' }}>
-              Stripe requires the platform owner to complete a quick 1-minute questionnaire before issuing live musician onboarding links.
+              Stripe requires you (the platform owner) to log into your Stripe account once to answer a 1-minute questionnaire before the API can create Express accounts for bands without login.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <a
-                href="https://dashboard.stripe.com/settings/connect"
+                href="https://dashboard.stripe.com/connect/accounts/overview"
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-primary btn-sm"
                 style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', textDecoration: 'none' }}
               >
-                Open Mobile Settings &rarr;
-              </a>
-              <a
-                href="https://apps.apple.com/app/stripe-dashboard/id396071430"
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-outline btn-sm"
-                style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', textDecoration: 'none' }}
-              >
-                Stripe iOS App 📱
+                Open Questionnaire in Stripe &rarr;
               </a>
             </div>
           </div>
@@ -938,7 +929,7 @@ export default function ProfileSettings() {
                   color: '#34d399',
                   lineHeight: 1.45
                 }}>
-                  📱 <strong>Musician Phone Onboarding:</strong> When musicians tap &ldquo;Connect Bank Account&rdquo;, they are routed to Stripe&rsquo;s lightweight Express mobile portal (<code>connect.stripe.com</code>), which is purpose-built for fast, crash-free phone uploads on iPhone and Android.
+                  ✨ <strong>Zero Stripe Login Needed for Bands:</strong> The API creates an individual Express account per band and redirects directly to Stripe&rsquo;s hosted onboarding form (<code>connect.stripe.com</code>). Bands only enter their name and debit/bank routing number!
                 </div>
 
                 <p style={{
@@ -949,13 +940,13 @@ export default function ProfileSettings() {
                   overflowWrap: 'anywhere',
                   wordBreak: 'break-word'
                 }}>
-                  To activate live musician payouts, Stripe requires the platform owner to complete a 1-minute profile questionnaire and verify business/identity documents once.
+                  <strong>Platform Owner Note:</strong> To unlock Express account creation for bands, Stripe requires you (the platform owner) to answer a 1-minute, 3-question platform questionnaire once on your Stripe dashboard.
                 </p>
 
-                {/* Mobile-Safe Action Buttons for Platform Owner */}
+                {/* Platform Questionnaire Link for Platform Owner */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%' }}>
                   <a
-                    href="https://dashboard.stripe.com/settings/connect"
+                    href="https://dashboard.stripe.com/connect/accounts/overview"
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-primary btn-sm"
@@ -969,46 +960,8 @@ export default function ProfileSettings() {
                       fontWeight: 700
                     }}
                   >
-                    <span>1. Open Mobile Settings (Fast & Lightweight) &rarr;</span>
+                    <span>Log in to Stripe & Answer 1-Min Platform Questionnaire &rarr;</span>
                   </a>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', width: '100%' }}>
-                    <a
-                      href="https://dashboard.stripe.com/settings/verifications"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-outline btn-sm"
-                      style={{
-                        fontSize: '0.8rem',
-                        padding: '0.55rem 0.75rem',
-                        textDecoration: 'none',
-                        justifyContent: 'center',
-                        textAlign: 'center',
-                        borderColor: 'rgba(59, 130, 246, 0.4)',
-                        color: '#60a5fa'
-                      }}
-                    >
-                      <span>Upload Documents / ID &rarr;</span>
-                    </a>
-
-                    <a
-                      href="https://apps.apple.com/app/stripe-dashboard/id396071430"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-outline btn-sm"
-                      style={{
-                        fontSize: '0.8rem',
-                        padding: '0.55rem 0.75rem',
-                        textDecoration: 'none',
-                        justifyContent: 'center',
-                        textAlign: 'center',
-                        borderColor: 'rgba(16, 185, 129, 0.4)',
-                        color: '#34d399'
-                      }}
-                    >
-                      <span>Official Stripe iOS App 📱</span>
-                    </a>
-                  </div>
 
                   <div style={{
                     fontSize: '0.75rem',
@@ -1019,7 +972,7 @@ export default function ProfileSettings() {
                     padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)'
                   }}>
-                    💡 <strong>Why did Safari glitch?</strong> The desktop admin dashboard (<code>dashboard.stripe.com/connect/accounts</code>) is heavy and exceeds Safari&rsquo;s phone memory limit during camera uploads. Using the <strong>Stripe iOS App</strong> (native camera), the <strong>Mobile Settings link</strong> above, or a laptop browser prevents any crash!
+                    💡 Once you submit the 3 questions on your Stripe dashboard, the API instantly unlocks, and every band tapping &ldquo;Connect Bank Account&rdquo; lands directly on the hosted Express onboarding form with <strong>zero login needed</strong>.
                   </div>
 
                   <button

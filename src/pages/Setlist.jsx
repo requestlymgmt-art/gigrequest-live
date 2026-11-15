@@ -678,17 +678,25 @@ export default function Setlist() {
           </button>
         </div>
       ) : (
-        <div style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-lg)',
-          overflow: 'hidden',
-          position: 'relative',
-          paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
-          transition: 'padding-left 0.2s ease',
-        }}>
-          {/* Alphabet Fast Scroll on Left */}
-          <AlphabetFastScroll songs={filteredSongs} side="left" offset={100} />
+        <div
+          id="setlist-songs-container"
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+            position: 'relative',
+            paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
+            transition: 'padding-left 0.2s ease',
+          }}
+        >
+          {/* Alphabet Fast Scroll on Left (Active only while viewing songs) */}
+          <AlphabetFastScroll
+            songs={filteredSongs}
+            side="left"
+            offset={100}
+            containerId="setlist-songs-container"
+          />
 
           {filteredSongs.map((song, idx) => {
             const isEditing = editingSongId === song.id;

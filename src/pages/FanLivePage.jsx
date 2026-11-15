@@ -561,17 +561,25 @@ export default function FanLivePage() {
       </div>
 
       {/* Song Catalog List with Alphabet Fast Scroll */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.65rem',
-        marginBottom: '1.5rem',
-        position: 'relative',
-        paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
-        transition: 'padding-left 0.2s ease',
-      }}>
-        {/* Fast Alphabetical Cursor on Left Side */}
-        <AlphabetFastScroll songs={filteredSongs} side="left" offset={110} />
+      <div
+        id="song-list-container"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.65rem',
+          marginBottom: '1.5rem',
+          position: 'relative',
+          paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
+          transition: 'padding-left 0.2s ease',
+        }}
+      >
+        {/* Fast Alphabetical Cursor on Left Side (Active only while viewing songs) */}
+        <AlphabetFastScroll
+          songs={filteredSongs}
+          side="left"
+          offset={110}
+          containerId="song-list-container"
+        />
 
         {filteredSongs.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
