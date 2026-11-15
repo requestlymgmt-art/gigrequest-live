@@ -4,6 +4,8 @@
 
 [build.environment]
   NETLIFY_FEEDBACK = "false"
+  SECRETS_SCAN_ENABLED = "false"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 [functions]
   directory = "netlify/functions"

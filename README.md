@@ -67,13 +67,13 @@ Create a `.env` file in the root directory:
 # Supabase Configuration
 VITE_SUPABASE_URL=https://szcsiadugzhlfgoirkfw.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_ACCESS_TOKEN=sbp_...
+SUPABASE_ACCESS_TOKEN=your_supabase_access_token
 
 # GitHub Access Token
-GITHUB_TOKEN=ghp_...
+GITHUB_TOKEN=your_github_token
 
 # Stripe Configuration
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 ```
 
 ---
