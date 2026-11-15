@@ -203,16 +203,24 @@ export async function cancelStripePayment(paymentIntentId) {
 }
 
 /**
- * Creates a real-money Stripe Checkout redirect session if backend is configured
+ * Creates a real-money Stripe Checkout redirect session with Apple Pay, Google Pay, and Cards
  */
 export async function createStripeCheckoutRedirect({
   amount,
+  artistNet = 0,
   requestlyFee = 0,
   bandStripeAccountId = '',
   songTitle = 'Song Request',
+  songArtist = '',
   fanName = 'Anonymous Fan',
+  fanMessage = '',
+  songPrice = 0,
+  tipAmount = 0,
+  fanFee = 0,
   bandId = '',
   slug = 'live',
+  isDirectTip = false,
+  requestId = '',
 }) {
   try {
     const res = await fetch('/.netlify/functions/create-checkout-session', {
@@ -220,13 +228,21 @@ export async function createStripeCheckoutRedirect({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount,
+        artistNet,
         requestlyFee,
         bandStripeAccountId,
         songTitle,
+        songArtist,
         fanName,
+        fanMessage,
+        songPrice,
+        tipAmount,
+        fanFee,
         bandId,
         slug,
-        origin: typeof window !== 'undefined' ? window.location.origin : 'https://fluffy-swan-6c20ad.netlify.app',
+        isDirectTip,
+        requestId,
+        origin: typeof window !== 'undefined' ? window.location.origin : 'https://requestly.live',
       }),
     });
 
@@ -234,13 +250,17 @@ export async function createStripeCheckoutRedirect({
       const data = await res.json();
       if (data && data.url) {
         window.location.href = data.url;
-        return true;
+        return { success: true, url: data.url, sessionId: data.sessionId };
+      }
+      if (data && data.error) {
+        console.error('Checkout creation error:', data.error);
+        return { success: false, error: data.error };
       }
     }
   } catch (err) {
-    console.debug('Checkout session redirect skipped:', err.message);
+    console.error('Checkout session redirect error:', err);
   }
-  return false;
+  return { success: false };
 }
 
 /**

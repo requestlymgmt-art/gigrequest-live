@@ -39,7 +39,22 @@ export const handler = async (event) => {
     }
 
     if (stripe && process.env.STRIPE_SECRET_KEY && !paymentIntentId.startsWith('pi_hold_') && !paymentIntentId.startsWith('pi_test_')) {
-      const capturedIntent = await stripe.paymentIntents.capture(paymentIntentId);
+      let targetPi = paymentIntentId;
+      // If a Stripe Checkout Session ID (cs_...) was stored, retrieve its underlying PaymentIntent
+      if (targetPi.startsWith('cs_')) {
+        try {
+          const session = await stripe.checkout.sessions.retrieve(targetPi);
+          if (session && session.payment_intent) {
+            targetPi = typeof session.payment_intent === 'string'
+              ? session.payment_intent
+              : session.payment_intent.id;
+          }
+        } catch (e) {
+          console.warn('Could not resolve checkout session for capture:', e.message);
+        }
+      }
+
+      const capturedIntent = await stripe.paymentIntents.capture(targetPi);
       return {
         statusCode: 200,
         headers,
@@ -73,4 +88,3 @@ export const handler = async (event) => {
     };
   }
 };
-
