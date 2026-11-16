@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Radio, 
@@ -9,31 +9,85 @@ import {
   LogOut, 
   LogIn, 
   Menu, 
-  X
+  X,
+  Play
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase, DEMO_BAND_ID } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function Navbar() {
-  const { user, profile, isDemoMode, signOut, updateProfile } = useAuth();
+  const { user, profile, isDemoMode, signOut, bandId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [activeEvent, setActiveEvent] = useState(null);
 
-  const isLive = profile?.accepting_requests ?? true;
+  const effectiveBandId = bandId || profile?.id || DEMO_BAND_ID;
   const bandSlug = profile?.slug || 'groove-collective';
 
-  const handleToggleLiveStatus = async () => {
-    if (!profile) return;
-    setUpdatingStatus(true);
+  // Fetch active event for this band
+  const fetchActiveEvent = async () => {
+    if (!effectiveBandId) return;
     try {
-      await updateProfile({ accepting_requests: !isLive });
-      toast.success(!isLive ? '🟢 Band is now taking requests live!' : '⏸️ Requests paused for set break');
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .eq('band_id', effectiveBandId)
+        .eq('status', 'live')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setActiveEvent(data || null);
     } catch (err) {
-      toast.error('Failed to update status');
-    } finally {
-      setUpdatingStatus(false);
+      console.error('Navbar event error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveEvent();
+
+    if (!effectiveBandId) return;
+
+    // Realtime listener for live events changes
+    const channel = supabase
+      .channel(`navbar_events_${effectiveBandId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+          filter: `band_id=eq.${effectiveBandId}`,
+        },
+        () => {
+          fetchActiveEvent();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveBandId]);
+
+  // Action when band clicks the Live Event / Set status button
+  const handleEventAction = () => {
+    if (activeEvent) {
+      // Event is currently live -> go to live queue on dashboard
+      if (location.pathname !== '/dashboard') {
+        navigate('/dashboard');
+      } else {
+        toast(`🎸 Live Event "${activeEvent.title}" is in progress! Manage queue below or tap "End Event & Get Summary".`, { icon: '🟢' });
+      }
+    } else {
+      // No active event -> Open Create Event modal!
+      if (location.pathname === '/dashboard') {
+        window.dispatchEvent(new CustomEvent('open-start-event-modal'));
+      } else {
+        navigate('/dashboard?create_event=1');
+      }
     }
   };
 
@@ -127,26 +181,36 @@ export default function Navbar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           {(user || isDemoMode) ? (
             <>
-              {/* Accepting Requests Toggle */}
+              {/* Live Gig Event Status Button */}
               <button
-                onClick={handleToggleLiveStatus}
-                disabled={updatingStatus}
+                onClick={handleEventAction}
                 className="btn btn-sm"
                 style={{
-                  background: isLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  border: `1px solid ${isLive ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
-                  color: isLive ? '#34d399' : '#f87171',
+                  background: activeEvent ? 'rgba(16, 185, 129, 0.16)' : 'rgba(239, 68, 68, 0.16)',
+                  border: `1px solid ${activeEvent ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)'}`,
+                  color: activeEvent ? '#34d399' : '#f87171',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.8rem',
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  boxShadow: activeEvent ? '0 0 12px rgba(16, 185, 129, 0.25)' : '0 2px 8px rgba(239, 68, 68, 0.2)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}
-                title="Toggle whether fans can send requests right now"
+                title={activeEvent ? `Live Event: ${activeEvent.title} (Click to view live queue)` : "Click to create a live gig event so fans can send requests"}
               >
-                <span className={isLive ? 'live-pulse' : ''} style={{
+                <span className={activeEvent ? 'live-pulse' : ''} style={{
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: isLive ? '#10b981' : '#ef4444'
+                  background: activeEvent ? '#10b981' : '#ef4444',
+                  flexShrink: 0
                 }} />
-                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                  {isLive ? 'Taking Requests' : 'Requests Paused'}
+                <span>
+                  {activeEvent ? 'Live Set Active' : 'Create Event'}
                 </span>
               </button>
 
@@ -211,6 +275,40 @@ export default function Navbar() {
           flexDirection: 'column',
           gap: '0.5rem'
         }}>
+          {/* Mobile Event Action Button */}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleEventAction();
+            }}
+            className="btn btn-sm"
+            style={{
+              background: activeEvent ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+              border: `1px solid ${activeEvent ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)'}`,
+              color: activeEvent ? '#34d399' : '#f87171',
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              width: '100%',
+              justifyContent: 'center',
+              marginBottom: '0.25rem',
+              cursor: 'pointer'
+            }}
+          >
+            <span className={activeEvent ? 'live-pulse' : ''} style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: activeEvent ? '#10b981' : '#ef4444',
+              flexShrink: 0
+            }} />
+            <span>{activeEvent ? `🟢 Live Event: ${activeEvent.title}` : '🔴 Create Live Event'}</span>
+          </button>
+
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = location.pathname === link.path;

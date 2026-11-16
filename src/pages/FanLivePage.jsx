@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { 
-  Music, 
-  Search, 
-  Heart, 
-  DollarSign, 
-  Sparkles, 
-  CheckCircle, 
-  Clock, 
-  CreditCard, 
-  Smartphone, 
-  Radio, 
-  X, 
+import {
+  Music,
+  Search,
+  Heart,
+  DollarSign,
+  Sparkles,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  Smartphone,
+  Radio,
+  X,
   ChevronRight,
   ShieldCheck,
   AlertCircle,
@@ -70,13 +70,13 @@ export default function FanLivePage() {
         songName
           ? `🎉 Real Payment Authorized! "${decodeURIComponent(songName)}" is on the band's stage screen!`
           : isTip === 'true'
-          ? '🎉 Real Payment Succeeded! Your direct tip was sent to the band!'
-          : '🎉 Real Payment Authorized! Your request is on the stage screen!'
+            ? '🎉 Real Payment Succeeded! Your direct tip was sent to the band!'
+            : '🎉 Real Payment Authorized! Your request is on the stage screen!'
       );
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (isCancelled === 'true') {
       if (reqId) {
-        supabase.from('requests').delete().eq('id', reqId).then(() => {});
+        supabase.from('requests').delete().eq('id', reqId).then(() => { });
       }
       toast('Payment checkout was cancelled ($0 charged)', { icon: 'ℹ️' });
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -262,7 +262,7 @@ export default function FanLivePage() {
   };
 
   // Fee calculation
-  const baseSongPrice = isCustomRequest 
+  const baseSongPrice = isCustomRequest
     ? (Number(band?.custom_request_price) || 15.00)
     : (Number(selectedSong?.price) || 5.00);
 
@@ -613,41 +613,41 @@ export default function FanLivePage() {
                     transition: 'transform 0.15s ease, border-color 0.15s ease',
                   }}
                 >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                  <SongArtwork
-                    title={song.title}
-                    artist={song.artist}
-                    imageUrl={song.image_url}
-                    size={48}
-                    radius={10}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{
-                      fontSize: '0.98rem',
-                      color: '#fff',
-                      fontWeight: 700,
-                      marginBottom: '0.25rem',
-                      lineHeight: 1.3,
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                    }}>
-                      {song.title}
-                    </h4>
-                    <div style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '0.35rem',
-                      rowGap: '0.15rem',
-                      lineHeight: 1.3,
-                    }}>
-                      <span style={{ fontWeight: 500 }}>{song.artist}</span>
-                      <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                    <SongArtwork
+                      title={song.title}
+                      artist={song.artist}
+                      imageUrl={song.image_url}
+                      size={48}
+                      radius={10}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        fontSize: '0.98rem',
+                        color: '#fff',
+                        fontWeight: 700,
+                        marginBottom: '0.25rem',
+                        lineHeight: 1.3,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}>
+                        {song.title}
+                      </h4>
+                      <div style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '0.35rem',
+                        rowGap: '0.15rem',
+                        lineHeight: 1.3,
+                      }}>
+                        <span style={{ fontWeight: 500 }}>{song.artist}</span>
+                        <SongGenreBadge genre={song.genre} title={song.title} artist={song.artist} />
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: '0.35rem' }}>
                   <div
@@ -676,7 +676,7 @@ export default function FanLivePage() {
               </div>
             </div>
           );
-          })
+        })
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Radio, 
   DollarSign, 
@@ -41,12 +41,31 @@ export default function Dashboard() {
   const [decliningId, setDecliningId] = useState(null);
 
   // Live Event state
+  const [searchParams] = useSearchParams();
   const [activeEvent, setActiveEvent] = useState(null);
   const [showStartEventModal, setShowStartEventModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [summaryEvent, setSummaryEvent] = useState(null);
   const [summaryRequests, setSummaryRequests] = useState([]);
   const [endingEvent, setEndingEvent] = useState(false);
+
+  // Trigger Start Event modal from navbar navigation or custom event
+  useEffect(() => {
+    if (searchParams.get('create_event') === '1' || searchParams.get('start_event') === 'true') {
+      setShowStartEventModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handleOpenModal = () => {
+      setShowStartEventModal(true);
+    };
+    window.addEventListener('open-start-event-modal', handleOpenModal);
+    return () => {
+      window.removeEventListener('open-start-event-modal', handleOpenModal);
+    };
+  }, []);
 
   const effectiveBandId = bandId || profile?.id || DEMO_BAND_ID;
   const timerElapsed = useEventTimer(activeEvent?.started_at);
