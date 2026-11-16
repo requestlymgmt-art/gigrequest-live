@@ -684,21 +684,22 @@ export default function Setlist() {
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
             position: 'relative',
-            paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
-            transition: 'padding-left 0.2s ease',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.35rem',
+            padding: '0.4rem',
           }}
         >
-          {/* Alphabet Fast Scroll on Left (Active only while viewing songs) */}
+          {/* Alphabet Fast Scroll on Left */}
           <AlphabetFastScroll
             songs={filteredSongs}
             side="left"
             offset={100}
-            containerId="setlist-songs-container"
           />
 
-          {filteredSongs.map((song, idx) => {
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {filteredSongs.map((song, idx) => {
             const isEditing = editingSongId === song.id;
             const letter = (song.title || '').trim().charAt(0).toUpperCase();
             const groupLetter = /[A-Z]/.test(letter) ? letter : '#';
@@ -866,6 +867,7 @@ export default function Setlist() {
             </div>
           );
           })}
+          </div>
         </div>
       )}
 

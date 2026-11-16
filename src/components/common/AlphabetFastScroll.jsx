@@ -1,18 +1,17 @@
 // src/components/common/AlphabetFastScroll.jsx
 // Fast alphabetical scroller for jumping smoothly through song lists
-// Only appears when viewing the song list; stays hidden above so it doesn't intrude into the profile/bio card
+// Positioned sticky strictly within the song list container so it NEVER intrudes into the profile/bio section
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 export default function AlphabetFastScroll({
   songs = [],
   side = 'left',
-  offset = 120, // Offset for sticky navbar / search bar
+  offset = 100, // Offset for sticky navbar / header
   minSongs = 5,  // Only show if list has enough songs to warrant fast scrolling
-  containerId = null,
+  topStickyOffset = 75, // Top distance when stuck in viewport
 }) {
   const [activeLetter, setActiveLetter] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const hideTimerRef = useRef(null);
   const stripRef = useRef(null);
   const lastScrolledLetterRef = useRef(null);
@@ -41,44 +40,6 @@ export default function AlphabetFastScroll({
 
     return arr;
   }, [songs, minSongs]);
-
-  // Track scroll position so cursor is ONLY visible while actively browsing the song list
-  // It stays strictly hidden when viewing the profile header/bio/tip section above
-  useEffect(() => {
-    const handleScroll = () => {
-      const container = containerId
-        ? document.getElementById(containerId)
-        : document.querySelector('[data-letter-group]')?.closest('[style*="paddingLeft"]') || document.querySelector('[data-letter-group]');
-
-      if (!container) {
-        setIsVisible(false);
-        return;
-      }
-
-      const rect = container.getBoundingClientRect();
-      const vh = window.innerHeight;
-
-      // The alphabet strip must ONLY appear once the songs have scrolled up into view
-      // and the bio/hero card above has scrolled off screen.
-      // Strict guard: if scrollY < 180 (user is in the bio/header area), ALWAYS hide!
-      const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-      if (scrollY < 180) {
-        setIsVisible(false);
-        return;
-      }
-
-      const inView = rect.top <= 90 && rect.bottom >= 160;
-      setIsVisible(inView);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [containerId, songs]);
 
   // Scroll to the first song matching the selected letter
   const scrollToLetter = useCallback((letter, instant = false) => {
@@ -165,7 +126,21 @@ export default function AlphabetFastScroll({
   if (letters.length < 2) return null;
 
   return (
-    <>
+    <div
+      style={{
+        position: 'sticky',
+        top: `${topStickyOffset}px`,
+        alignSelf: 'flex-start',
+        zIndex: 35,
+        width: '20px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}
+    >
       {/* Alphabetical Fast Scroll Vertical Strip */}
       <div
         ref={stripRef}
@@ -173,29 +148,22 @@ export default function AlphabetFastScroll({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         style={{
-          position: 'fixed',
-          [side]: '4px',
-          top: '50%',
-          transform: isVisible ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.85)',
-          opacity: isVisible ? 1 : 0,
-          pointerEvents: isVisible ? 'auto' : 'none',
-          transition: 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          zIndex: 80,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '1px',
-          background: 'rgba(11, 15, 25, 0.8)',
+          background: 'rgba(11, 15, 25, 0.88)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 255, 255, 0.14)',
-          boxShadow: '0 4px 18px rgba(0, 0, 0, 0.5)',
-          borderRadius: '16px',
-          padding: '6px 3px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+          borderRadius: '12px',
+          padding: '4px 1px',
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          width: '100%',
         }}
       >
         {letters.map((char) => {
@@ -209,20 +177,20 @@ export default function AlphabetFastScroll({
                 background: isActive ? '#3b82f6' : 'transparent',
                 color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
                 border: 'none',
-                borderRadius: '6px',
-                width: '18px',
-                height: '18px',
+                borderRadius: '4px',
+                width: '16px',
+                height: '14px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.65rem',
+                fontSize: '0.6rem',
                 fontWeight: isActive ? 800 : 700,
                 lineHeight: 1,
                 padding: 0,
                 margin: 0,
                 cursor: 'pointer',
                 transition: 'transform 0.1s ease, color 0.1s ease, background 0.1s ease',
-                transform: isActive ? 'scale(1.3)' : 'scale(1)',
+                transform: isActive ? 'scale(1.25)' : 'scale(1)',
               }}
               aria-label={`Jump to ${char}`}
             >
@@ -233,17 +201,17 @@ export default function AlphabetFastScroll({
       </div>
 
       {/* Floating Magnifying Letter Bubble */}
-      {activeLetter && isVisible && (
+      {activeLetter && (
         <div
           style={{
             position: 'fixed',
-            left: side === 'left' ? '48px' : 'auto',
-            right: side === 'right' ? '48px' : 'auto',
+            left: side === 'left' ? '38px' : 'auto',
+            right: side === 'right' ? '38px' : 'auto',
             top: '50%',
             transform: 'translateY(-50%)',
             zIndex: 99,
-            width: '54px',
-            height: '54px',
+            width: '52px',
+            height: '52px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             boxShadow: '0 8px 24px rgba(59, 130, 246, 0.55), 0 2px 6px rgba(0,0,0,0.4)',
@@ -251,16 +219,15 @@ export default function AlphabetFastScroll({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.75rem',
+            fontSize: '1.65rem',
             fontWeight: 900,
             pointerEvents: 'none',
-            animation: 'popIn 0.15s ease-out',
             border: '2px solid rgba(255, 255, 255, 0.3)',
           }}
         >
           {activeLetter}
         </div>
       )}
-    </>
+    </div>
   );
 }

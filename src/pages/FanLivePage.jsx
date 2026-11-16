@@ -524,40 +524,38 @@ export default function FanLivePage() {
         )}
       </div>
 
-      {/* Song Catalog List with Alphabet Fast Scroll */}
+      {/* Song Catalog List with Alphabet Fast Scroll strictly kept within the song section */}
       <div
         id="song-list-container"
         style={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: '0.65rem',
+          alignItems: 'flex-start',
+          gap: '0.35rem',
           marginBottom: '1.5rem',
           position: 'relative',
-          paddingLeft: filteredSongs.length >= 6 ? '1.35rem' : '0',
-          transition: 'padding-left 0.2s ease',
         }}
       >
-        {/* Fast Alphabetical Cursor on Left Side (Active only while viewing songs) */}
+        {/* Fast Alphabetical Cursor on Left Side (Strictly kept inside the song list) */}
         <AlphabetFastScroll
           songs={filteredSongs}
           side="left"
-          offset={110}
-          containerId="song-list-container"
+          offset={100}
         />
 
-        {filteredSongs.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-              No matching songs found in the live setlist.
-            </p>
-            {band.allow_custom_song_requests && (
-              <button onClick={handleOpenCustomModal} className="btn btn-primary btn-sm">
-                Request a Custom Song
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredSongs.map((song, index) => {
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          {filteredSongs.length === 0 ? (
+            <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                No matching songs found in the live setlist.
+              </p>
+              {band.allow_custom_song_requests && (
+                <button onClick={handleOpenCustomModal} className="btn btn-primary btn-sm">
+                  Request a Custom Song
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredSongs.map((song, index) => {
             const price = Number(song.price) || 5;
             const letter = (song.title || '').trim().charAt(0).toUpperCase();
             const groupLetter = /[A-Z]/.test(letter) ? letter : '#';
@@ -678,6 +676,7 @@ export default function FanLivePage() {
             );
           })
         )}
+        </div>
       </div>
 
       {/* Custom Song Request Option (If band allows) */}
