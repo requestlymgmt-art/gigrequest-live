@@ -140,7 +140,7 @@ export default function StripeEmbeddedCheckout({
         expEl = expElements.create('expressCheckout', {
           paymentMethods: {
             applePay: 'auto',
-            googlePay: 'auto',
+            googlePay: 'always', // Force Google Pay button to display on Android/Chrome
             link: 'never',
             amazonPay: 'never',
             paypal: 'never',
@@ -150,24 +150,30 @@ export default function StripeEmbeddedCheckout({
             applePay: 'black',
             googlePay: 'black',
           },
-          buttonType: {
-            applePay: 'check-out',
-            googlePay: 'pay',
-          },
           buttonHeight: 48,
-          layout: {
-            maxColumns: 1,
-            maxRows: 1,
-          },
+        });
+
+        const checkAvailableWallets = (methods) => {
+          if (!isMounted || !methods) return;
+          const hasApple = methods.applePay === true || methods.applePay?.available === true;
+          const hasGoogle = methods.googlePay === true || methods.googlePay?.available === true || (methods.googlePay && typeof methods.googlePay === 'object');
+          if (hasApple || hasGoogle) {
+            setHasWallets(true);
+          }
+        };
+
+        expEl.on('availablepaymentmethodschange', (event) => {
+          checkAvailableWallets(event?.paymentMethods);
         });
 
         expEl.on('ready', ({ availablePaymentMethods }) => {
+          checkAvailableWallets(availablePaymentMethods);
           if (isMounted) {
-            const available = !!(
-              availablePaymentMethods?.applePay ||
-              availablePaymentMethods?.googlePay
-            );
-            setHasWallets(available);
+            // Default to true on mobile devices (Android / iOS) where express wallets are primary
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+              setHasWallets(true);
+            }
           }
         });
 
@@ -237,8 +243,12 @@ export default function StripeEmbeddedCheckout({
                 .select()
                 .single();
 
+              const walletType = paymentIntent?.charges?.data?.[0]?.payment_method_details?.card?.wallet?.type ||
+                paymentIntent?.payment_method_types?.[0] || 'express_wallet';
+              const walletLabel = walletType.includes('google') ? 'Google Pay' : 'Apple Pay';
+
               confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-              toast.success('🎉 Real payment authorized with Apple Pay!');
+              toast.success(`🎉 Real payment authorized with ${walletLabel}!`);
               if (onSuccess) onSuccess(newReq);
             }
           } catch (err) {
@@ -452,7 +462,7 @@ export default function StripeEmbeddedCheckout({
           fontSize: '0.85rem'
         }}>
           <RefreshCw size={16} className="spin" color="#3b82f6" />
-          <span>Connecting to Apple Pay & secure checkout...</span>
+          <span>Connecting to Apple Pay, Google Pay & secure checkout...</span>
         </div>
       )}
 
@@ -477,12 +487,12 @@ export default function StripeEmbeddedCheckout({
 
       {/* 1. Native Apple Pay & Google Pay (Express Checkout) */}
       <div style={{
-        display: (loading || !hasWallets) ? 'none' : 'block',
-        marginBottom: '0.75rem'
+        display: loading ? 'none' : 'block',
+        marginBottom: hasWallets ? '0.75rem' : '0'
       }}>
         <div
           ref={expressContainerRef}
-          style={{ minHeight: '48px' }}
+          style={{ minHeight: hasWallets ? '48px' : '0' }}
         />
       </div>
 

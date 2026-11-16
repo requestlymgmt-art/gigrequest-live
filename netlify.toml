@@ -12,6 +12,11 @@
   node_bundler = "esbuild"
 
 [[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "payment=(self \"https://js.stripe.com\")"
+
+[[headers]]
   for = "/.well-known/apple-developer-merchantid-domain-association"
   [headers.values]
     Content-Type = "text/plain"
