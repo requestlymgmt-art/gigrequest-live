@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { STRIPE_LIVE_PUBLISHABLE_KEY } from '../../lib/stripe';
 import { supabase } from '../../lib/supabase';
-import { ShieldCheck, CreditCard, RefreshCw, AlertCircle, Lock } from 'lucide-react';
+import { ShieldCheck, CreditCard, RefreshCw, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -52,14 +52,15 @@ export default function StripeEmbeddedCheckout({
 }) {
   const expressContainerRef = useRef(null);
   const cardContainerRef = useRef(null);
-  const cardElementRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [stripeInstance, setStripeInstance] = useState(null);
+  const [expressElementsInstance, setExpressElementsInstance] = useState(null);
+  const [expressElement, setExpressElement] = useState(null);
+  const [cardElement, setCardElement] = useState(null);
   const [hasWallets, setHasWallets] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [cardComplete, setCardComplete] = useState(false);
 
   // Always keep latest props in a ref for event callbacks
   const propsRef = useRef({
@@ -104,12 +105,13 @@ export default function StripeEmbeddedCheckout({
 
   const amountInCents = Math.max(50, Math.round(Number(amount) * 100));
 
+  // 1. Initialize Stripe, Express Checkout Element, and Card Element on mount
   useEffect(() => {
     let isMounted = true;
-    let expressElement = null;
-    let cardElement = null;
+    let expEl = null;
+    let crdEl = null;
 
-    async function initStripeElements() {
+    async function initStripe() {
       setLoading(true);
       setErrorMessage('');
 
@@ -118,9 +120,8 @@ export default function StripeEmbeddedCheckout({
         if (!stripe || !isMounted) return;
         setStripeInstance(stripe);
 
-        // 1. Express Checkout instance (Apple Pay & Google Pay ONLY)
-        // Explicitly set link, amazonPay, paypal, klarna to 'never' so ONLY Apple Pay and Google Pay appear!
-        const expressElements = stripe.elements({
+        // A. Express Checkout instance (Apple Pay & Google Pay ONLY)
+        const expElements = stripe.elements({
           mode: 'payment',
           amount: amountInCents,
           currency: 'usd',
@@ -134,133 +135,125 @@ export default function StripeEmbeddedCheckout({
             },
           },
         });
+        setExpressElementsInstance(expElements);
 
-        if (expressContainerRef.current) {
-          expressContainerRef.current.innerHTML = '';
-          expressElement = expressElements.create('expressCheckout', {
-            paymentMethods: {
-              applePay: 'auto',
-              googlePay: 'auto',
-              link: 'never',
-              amazonPay: 'never',
-              paypal: 'never',
-              klarna: 'never',
-            },
-            buttonTheme: {
-              applePay: 'black',
-              googlePay: 'black',
-            },
-            buttonType: {
-              applePay: 'check-out',
-              googlePay: 'pay',
-            },
-            buttonHeight: 48,
-            layout: {
-              maxColumns: 1,
-              maxRows: 1,
-            },
-          });
+        expEl = expElements.create('expressCheckout', {
+          paymentMethods: {
+            applePay: 'auto',
+            googlePay: 'auto',
+            link: 'never',
+            amazonPay: 'never',
+            paypal: 'never',
+            klarna: 'never',
+          },
+          buttonTheme: {
+            applePay: 'black',
+            googlePay: 'black',
+          },
+          buttonType: {
+            applePay: 'check-out',
+            googlePay: 'pay',
+          },
+          buttonHeight: 48,
+          layout: {
+            maxColumns: 1,
+            maxRows: 1,
+          },
+        });
 
-          expressElement.on('ready', ({ availablePaymentMethods }) => {
-            if (isMounted) {
-              const available = !!(
-                availablePaymentMethods?.applePay ||
-                availablePaymentMethods?.googlePay
-              );
-              setHasWallets(available);
+        expEl.on('ready', ({ availablePaymentMethods }) => {
+          if (isMounted) {
+            const available = !!(
+              availablePaymentMethods?.applePay ||
+              availablePaymentMethods?.googlePay
+            );
+            setHasWallets(available);
+          }
+        });
+
+        // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
+        expEl.on('confirm', async (event) => {
+          setProcessing(true);
+          const p = propsRef.current;
+          try {
+            const piRes = await fetch('/.netlify/functions/create-payment-intent', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: p.amount,
+                artistNet: p.artistNet,
+                requestlyFee: p.requestlyFee,
+                fanFee: p.fanFee,
+                stripeFee: p.stripeFee,
+                bandId: p.bandId,
+                bandStripeAccountId: p.bandStripeAccountId,
+                songTitle: p.songTitle,
+                songArtist: p.songArtist,
+                fanName: p.fanName.trim() || 'Anonymous Fan',
+                fanMessage: p.fanMessage.trim(),
+                isDirectTip: p.isDirectTip,
+                eventId: p.eventId || null,
+              }),
+            });
+
+            const piData = await piRes.json();
+            if (!piData.success || !piData.clientSecret) {
+              throw new Error(piData.error || 'Failed to initialize payment');
             }
-          });
 
-          // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
-          expressElement.on('confirm', async (event) => {
-            setProcessing(true);
-            const p = propsRef.current;
-            try {
-              // Create PaymentIntent on server with metadata and authorization hold
-              const piRes = await fetch('/.netlify/functions/create-payment-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  amount: p.amount,
-                  artistNet: p.artistNet,
-                  requestlyFee: p.requestlyFee,
-                  fanFee: p.fanFee,
-                  stripeFee: p.stripeFee,
-                  bandId: p.bandId,
-                  bandStripeAccountId: p.bandStripeAccountId,
-                  songTitle: p.songTitle,
-                  songArtist: p.songArtist,
-                  fanName: p.fanName.trim() || 'Anonymous Fan',
-                  fanMessage: p.fanMessage.trim(),
-                  isDirectTip: p.isDirectTip,
-                  eventId: p.eventId || null,
-                }),
-              });
+            const { error, paymentIntent } = await stripe.confirmPayment({
+              elements: expElements,
+              clientSecret: piData.clientSecret,
+              confirmParams: {
+                return_url: `${window.location.origin}/live/${p.slug}?payment_success=true&song=${encodeURIComponent(p.songTitle)}`,
+              },
+              redirect: 'if_required',
+            });
 
-              const piData = await piRes.json();
-              if (!piData.success || !piData.clientSecret) {
-                throw new Error(piData.error || 'Failed to initialize payment');
-              }
-
-              // Confirm payment in-place without redirecting
-              const { error, paymentIntent } = await stripe.confirmPayment({
-                elements: expressElements,
-                clientSecret: piData.clientSecret,
-                confirmParams: {
-                  return_url: `${window.location.origin}/live/${p.slug}?payment_success=true&song=${encodeURIComponent(p.songTitle)}`,
-                },
-                redirect: 'if_required',
-              });
-
-              if (error) {
-                event.complete('fail');
-                setErrorMessage(error.message || 'Payment authorization failed');
-                toast.error(error.message || 'Payment failed');
-              } else {
-                event.complete('success');
-                // Succeeded! Insert confirmed request into Supabase
-                const { data: newReq } = await supabase
-                  .from('requests')
-                  .insert({
-                    band_id: p.bandId,
-                    event_id: p.eventId || null,
-                    song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
-                    song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
-                    fan_name: p.fanName.trim() || 'Anonymous Fan',
-                    fan_message: p.fanMessage.trim(),
-                    song_price: Number(p.songPrice || 0),
-                    tip_amount: Number(p.tipAmount || 0),
-                    fan_fee: Number(p.fanFee || 0),
-                    total_paid: Number(p.amount),
-                    status: p.isDirectTip ? 'completed' : 'pending',
-                    payment_status: p.isDirectTip ? 'paid' : 'authorized', // Confirmed hold!
-                    payment_method: paymentIntent?.payment_method_types?.[0] || 'apple_pay',
-                    stripe_payment_id: paymentIntent?.id || piData.paymentIntentId,
-                  })
-                  .select()
-                  .single();
-
-                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-                toast.success('🎉 Real payment authorized with Apple Pay!');
-                if (onSuccess) onSuccess(newReq);
-              }
-            } catch (err) {
-              console.error('Express Checkout error:', err);
+            if (error) {
               event.complete('fail');
-              setErrorMessage(err.message || 'Payment failed');
-              toast.error(err.message || 'Payment failed');
-            } finally {
-              if (isMounted) setProcessing(false);
+              setErrorMessage(error.message || 'Payment authorization failed');
+              toast.error(error.message || 'Payment failed');
+            } else {
+              event.complete('success');
+              const { data: newReq } = await supabase
+                .from('requests')
+                .insert({
+                  band_id: p.bandId,
+                  event_id: p.eventId || null,
+                  song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
+                  song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
+                  fan_name: p.fanName.trim() || 'Anonymous Fan',
+                  fan_message: p.fanMessage.trim(),
+                  song_price: Number(p.songPrice || 0),
+                  tip_amount: Number(p.tipAmount || 0),
+                  fan_fee: Number(p.fanFee || 0),
+                  total_paid: Number(p.amount),
+                  status: p.isDirectTip ? 'completed' : 'pending',
+                  payment_status: p.isDirectTip ? 'paid' : 'authorized',
+                  payment_method: paymentIntent?.payment_method_types?.[0] || 'apple_pay',
+                  stripe_payment_id: paymentIntent?.id || piData.paymentIntentId,
+                })
+                .select()
+                .single();
+
+              confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+              toast.success('🎉 Real payment authorized with Apple Pay!');
+              if (onSuccess) onSuccess(newReq);
             }
-          });
+          } catch (err) {
+            console.error('Express Checkout error:', err);
+            event.complete('fail');
+            setErrorMessage(err.message || 'Payment failed');
+            toast.error(err.message || 'Payment failed');
+          } finally {
+            if (isMounted) setProcessing(false);
+          }
+        });
 
-          expressElement.mount(expressContainerRef.current);
-        }
-
-        // 2. Dedicated Card Element for direct Credit/Debit Card payments
-        // Separate from expressElements so there are ZERO conflicts, and it always renders cleanly!
+        // B. Dedicated Card Element instance
         const cardElements = stripe.elements();
-        cardElement = cardElements.create('card', {
+        crdEl = cardElements.create('card', {
           style: {
             base: {
               color: '#ffffff',
@@ -279,9 +272,8 @@ export default function StripeEmbeddedCheckout({
           hidePostalCode: false,
         });
 
-        cardElement.on('change', (event) => {
+        crdEl.on('change', (event) => {
           if (isMounted) {
-            setCardComplete(event.complete);
             if (event.error) {
               setErrorMessage(event.error.message);
             } else {
@@ -290,12 +282,8 @@ export default function StripeEmbeddedCheckout({
           }
         });
 
-        if (cardContainerRef.current) {
-          cardContainerRef.current.innerHTML = '';
-          cardElement.mount(cardContainerRef.current);
-        }
-        cardElementRef.current = cardElement;
-
+        setExpressElement(expEl);
+        setCardElement(crdEl);
         if (isMounted) setLoading(false);
       } catch (err) {
         console.error('Stripe Elements initialization error:', err);
@@ -306,23 +294,59 @@ export default function StripeEmbeddedCheckout({
       }
     }
 
-    initStripeElements();
+    initStripe();
 
     return () => {
       isMounted = false;
-      if (expressElement) {
-        try { expressElement.destroy(); } catch (e) {}
+      if (expEl) {
+        try { expEl.destroy(); } catch (e) {}
       }
-      if (cardElement) {
-        try { cardElement.destroy(); } catch (e) {}
+      if (crdEl) {
+        try { crdEl.destroy(); } catch (e) {}
       }
     };
-  }, [amountInCents, isDirectTip]);
+  }, []);
 
-  // Handle Card Submission using rock-solid confirmCardPayment
+  // 2. Mount Express Checkout into DOM once element & container are ready
+  useEffect(() => {
+    if (expressElement && expressContainerRef.current) {
+      try {
+        expressContainerRef.current.innerHTML = '';
+        expressElement.mount(expressContainerRef.current);
+      } catch (e) {
+        console.warn('Express mount error:', e);
+      }
+    }
+  }, [expressElement]);
+
+  // 3. Mount Card Element into DOM once element & container are ready
+  // This guarantees the card input mounts IMMEDIATELY on open (even with 0 tip!)
+  useEffect(() => {
+    if (cardElement && cardContainerRef.current) {
+      try {
+        cardContainerRef.current.innerHTML = '';
+        cardElement.mount(cardContainerRef.current);
+      } catch (e) {
+        console.warn('Card mount error:', e);
+      }
+    }
+  }, [cardElement]);
+
+  // 4. Update Express Checkout amount dynamically when user changes tip
+  useEffect(() => {
+    if (expressElementsInstance && amountInCents) {
+      try {
+        expressElementsInstance.update({ amount: amountInCents });
+      } catch (e) {
+        console.warn('Could not update express amount:', e);
+      }
+    }
+  }, [amountInCents, expressElementsInstance]);
+
+  // 5. Handle Card Form Submission
   const handleCardSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!stripeInstance || !cardElementRef.current) return;
+    if (!stripeInstance || !cardElement) return;
 
     setProcessing(true);
     setErrorMessage('');
@@ -360,7 +384,7 @@ export default function StripeEmbeddedCheckout({
         piData.clientSecret,
         {
           payment_method: {
-            card: cardElementRef.current,
+            card: cardElement,
             billing_details: {
               name: p.fanName.trim() || undefined,
             },
@@ -416,13 +440,14 @@ export default function StripeEmbeddedCheckout({
 
   return (
     <div style={{ width: '100%' }}>
+      {/* Loading state indicator */}
       {loading && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.6rem',
-          padding: '1.5rem',
+          padding: '1.25rem',
           color: 'var(--text-muted)',
           fontSize: '0.85rem'
         }}>
@@ -451,83 +476,85 @@ export default function StripeEmbeddedCheckout({
       )}
 
       {/* 1. Native Apple Pay & Google Pay (Express Checkout) */}
-      <div style={{ display: loading ? 'none' : 'block' }}>
+      <div style={{
+        display: (loading || !hasWallets) ? 'none' : 'block',
+        marginBottom: '0.75rem'
+      }}>
         <div
           ref={expressContainerRef}
-          style={{ minHeight: hasWallets ? '48px' : '0' }}
+          style={{ minHeight: '48px' }}
         />
       </div>
 
-      {/* 2. "OR PAY WITH CARD" Section with Clean Native Card Inputs */}
-      {!loading && (
-        <div style={{ marginTop: hasWallets ? '0.75rem' : '0' }}>
-          {hasWallets && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              margin: '0.85rem 0',
-              gap: '0.75rem'
-            }}>
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
-              <span style={{
-                color: 'var(--text-dim)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}>
-                Or Pay with Card
-              </span>
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
-            </div>
-          )}
+      {/* 2. "OR PAY WITH CARD" Divider */}
+      <div style={{
+        display: (!loading && hasWallets) ? 'flex' : 'none',
+        alignItems: 'center',
+        margin: '0.85rem 0',
+        gap: '0.75rem'
+      }}>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
+        <span style={{
+          color: 'var(--text-dim)',
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}>
+          Or Pay with Card
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
+      </div>
 
-          {/* Dedicated Card Element Input Box */}
-          <div style={{
-            background: '#131826',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
-            borderRadius: '10px',
-            padding: '13px 14px',
-            marginBottom: '1rem',
-            boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.35)'
-          }}>
-            <div ref={cardContainerRef} style={{ minHeight: '22px' }} />
-          </div>
-
-          <button
-            type="button"
-            disabled={processing}
-            onClick={handleCardSubmit}
-            className="btn btn-primary btn-lg"
-            style={{
-              width: '100%',
-              fontWeight: 700,
-              fontSize: '1rem',
-              padding: '0.85rem 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            {processing ? (
-              <>
-                <RefreshCw size={16} className="spin" />
-                <span>Authorizing Card...</span>
-              </>
-            ) : (
-              <>
-                <CreditCard size={17} />
-                <span>
-                  {isDirectTip
-                    ? `Tip $${Number(amount).toFixed(2)} with Card`
-                    : `Authorize $${Number(amount).toFixed(2)} & Send Request`}
-                </span>
-              </>
-            )}
-          </button>
+      {/* 3. Dedicated Card Element Input Box — ALWAYS IN DOM */}
+      <div style={{
+        display: loading ? 'none' : 'block',
+        marginBottom: '0.85rem'
+      }}>
+        <div style={{
+          background: '#131826',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          borderRadius: '10px',
+          padding: '13px 14px',
+          marginBottom: '0.85rem',
+          boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.35)'
+        }}>
+          <div ref={cardContainerRef} style={{ minHeight: '22px' }} />
         </div>
-      )}
+
+        <button
+          type="button"
+          disabled={processing}
+          onClick={handleCardSubmit}
+          className="btn btn-primary btn-lg"
+          style={{
+            width: '100%',
+            fontWeight: 700,
+            fontSize: '1rem',
+            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          {processing ? (
+            <>
+              <RefreshCw size={16} className="spin" />
+              <span>Authorizing Card...</span>
+            </>
+          ) : (
+            <>
+              <CreditCard size={17} />
+              <span>
+                {isDirectTip
+                  ? `Tip $${Number(amount).toFixed(2)} with Card`
+                  : `Authorize $${Number(amount).toFixed(2)} & Send Request`}
+              </span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Security Trust Note */}
       <div style={{
