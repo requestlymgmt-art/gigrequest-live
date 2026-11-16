@@ -59,8 +59,14 @@ export default function AlphabetFastScroll({
       const vh = window.innerHeight;
 
       // The alphabet strip must ONLY appear once the songs have scrolled up into view
-      // and the bio/hero card above has scrolled off screen (rect.top <= 90)
-      // When at the top of the profile, rect.top is > 200px, so inView is FALSE!
+      // and the bio/hero card above has scrolled off screen.
+      // Strict guard: if scrollY < 180 (user is in the bio/header area), ALWAYS hide!
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (scrollY < 180) {
+        setIsVisible(false);
+        return;
+      }
+
       const inView = rect.top <= 90 && rect.bottom >= 160;
       setIsVisible(inView);
     };

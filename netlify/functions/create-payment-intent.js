@@ -42,6 +42,7 @@ export const handler = async (event) => {
       songTitle,
       fanName,
       bandId,
+      eventId,
       isDirectTip = false, // Direct tip = auto capture, Song request = manual capture (only charged when accepted!)
       currency = 'usd',
     } = body;
@@ -69,6 +70,7 @@ export const handler = async (event) => {
           songTitle: songTitle || '',
           fanName: fanName || 'Anonymous Fan',
           bandId: bandId || '',
+          eventId: eventId || '',
           isDirectTip: isDirectTip ? 'true' : 'false',
           requestlyFee: (requestlyFee || 0).toString(),
         },

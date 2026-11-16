@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   cashapp_handle TEXT DEFAULT '',
   instagram_handle TEXT DEFAULT '',
   announcement_banner TEXT DEFAULT '🎵 Welcome! Scan, choose a song from our live setlist, and make a request with your message!',
+  active_event_id UUID,
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -54,14 +55,27 @@ CREATE TABLE IF NOT EXISTS public.requests (
   payment_status TEXT DEFAULT 'paid',
   payment_method TEXT DEFAULT 'stripe',
   stripe_payment_id TEXT DEFAULT '',
+  event_id UUID,
   is_pinned BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   played_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  band_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'Live Set',
+  venue TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'live',
+  started_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  ended_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.songs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public profiles are viewable by everyone') THEN

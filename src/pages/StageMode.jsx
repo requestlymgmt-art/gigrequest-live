@@ -15,6 +15,7 @@ import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SongArtwork from '../components/common/SongArtwork';
 import { captureStripePayment } from '../lib/stripe';
+import { useEventTimer } from '../hooks/useEventTimer';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -24,17 +25,36 @@ export default function StageMode() {
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeEvent, setActiveEvent] = useState(null);
+  const timerElapsed = useEventTimer(activeEvent?.started_at);
 
   const fetchLiveQueue = async () => {
     if (!effectiveBandId) return;
     try {
-      const { data, error } = await supabase
+      // 1. Fetch active event
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('*')
+        .eq('band_id', effectiveBandId)
+        .eq('status', 'live')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setActiveEvent(eventData || null);
+
+      let query = supabase
         .from('requests')
         .select('*')
         .eq('band_id', effectiveBandId)
         .in('status', ['playing', 'up_next', 'pending'])
-        .in('payment_status', ['authorized', 'paid'])
-        .order('created_at', { ascending: true });
+        .in('payment_status', ['authorized', 'paid']);
+
+      if (eventData) {
+        query = query.or(`event_id.eq.${eventData.id},and(event_id.is.null,created_at.gte.${eventData.started_at})`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: true });
 
       if (error) throw error;
       setRequests(data || []);
@@ -64,8 +84,25 @@ export default function StageMode() {
       )
       .subscribe();
 
+    const eventChannel = supabase
+      .channel(`stage_events_${effectiveBandId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+          filter: `band_id=eq.${effectiveBandId}`,
+        },
+        () => {
+          fetchLiveQueue();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(eventChannel);
     };
   }, [effectiveBandId]);
 
@@ -142,11 +179,24 @@ export default function StageMode() {
             <ArrowLeft size={16} />
             <span>Exit Stage View</span>
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <span className="live-pulse" />
             <span style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.05em', color: '#10b981' }}>
               STAGE TELEPROMPTER • {profile?.band_name || 'The Groove Collective'}
             </span>
+            {activeEvent && (
+              <span style={{
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '8px',
+                padding: '0.2rem 0.65rem',
+                fontSize: '0.82rem',
+                color: '#60a5fa',
+                fontWeight: 700,
+              }}>
+                {activeEvent.title} • ⏱ {timerElapsed}
+              </span>
+            )}
           </div>
         </div>
 

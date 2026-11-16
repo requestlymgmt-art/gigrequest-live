@@ -79,6 +79,7 @@ export const handler = async (event) => {
         if (!existing) {
           await supabase.from('requests').insert({
             band_id: meta.bandId,
+            event_id: meta.eventId || null,
             song_title: meta.songTitle,
             song_artist: meta.songArtist || '',
             fan_name: meta.fanName || 'Anonymous Fan',
@@ -121,6 +122,7 @@ export const handler = async (event) => {
         if (!existing) {
           await supabase.from('requests').insert({
             band_id: meta.bandId,
+            event_id: meta.eventId || null,
             song_title: '💖 Direct Tip to the Band',
             song_artist: 'Thank You!',
             fan_name: meta.fanName || 'Generous Fan',

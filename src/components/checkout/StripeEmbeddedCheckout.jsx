@@ -45,6 +45,7 @@ export default function StripeEmbeddedCheckout({
   bandStripeAccountId = '',
   slug = 'live',
   isDirectTip = false,
+  eventId = null,
   onSuccess,
   onCancel,
 }) {
@@ -76,6 +77,7 @@ export default function StripeEmbeddedCheckout({
     bandStripeAccountId,
     slug,
     isDirectTip,
+    eventId,
   });
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function StripeEmbeddedCheckout({
       bandStripeAccountId,
       slug,
       isDirectTip,
+      eventId,
     };
   });
 
@@ -201,6 +204,7 @@ export default function StripeEmbeddedCheckout({
                   fanName: p.fanName.trim() || 'Anonymous Fan',
                   fanMessage: p.fanMessage.trim(),
                   isDirectTip: p.isDirectTip,
+                  eventId: p.eventId || null,
                 }),
               });
 
@@ -230,6 +234,7 @@ export default function StripeEmbeddedCheckout({
                   .from('requests')
                   .insert({
                     band_id: p.bandId,
+                    event_id: p.eventId || null,
                     song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
                     song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
                     fan_name: p.fanName.trim() || 'Anonymous Fan',
@@ -333,6 +338,7 @@ export default function StripeEmbeddedCheckout({
           fanName: p.fanName.trim() || 'Anonymous Fan',
           fanMessage: p.fanMessage.trim(),
           isDirectTip: p.isDirectTip,
+          eventId: p.eventId || null,
         }),
       });
 
@@ -360,6 +366,7 @@ export default function StripeEmbeddedCheckout({
           .from('requests')
           .insert({
             band_id: p.bandId,
+            event_id: p.eventId || null,
             song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
             song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
             fan_name: p.fanName.trim() || 'Anonymous Fan',

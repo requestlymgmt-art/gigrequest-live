@@ -100,6 +100,7 @@ export default function FanLivePage() {
   // Direct Tip Modal (without song)
   const [showDirectTipModal, setShowDirectTipModal] = useState(false);
   const [directTipAmount, setDirectTipAmount] = useState(10);
+  const [activeEvent, setActiveEvent] = useState(null);
 
   // Fetch band profile & active songs
   const fetchBandData = async () => {
@@ -125,6 +126,18 @@ export default function FanLivePage() {
       setBand(bandData);
 
       if (bandData) {
+        // Fetch active event
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('*')
+          .eq('band_id', bandData.id)
+          .eq('status', 'live')
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setActiveEvent(eventData || null);
+
         // 2. Fetch band's active songs
         const { data: songsData } = await supabase
           .from('songs')
@@ -146,6 +159,56 @@ export default function FanLivePage() {
   useEffect(() => {
     fetchBandData();
   }, [effectiveSlug]);
+
+  // Realtime subscription for live events & profile status changes
+  useEffect(() => {
+    if (!band?.id) return;
+
+    const eventChannel = supabase
+      .channel(`fan_events_${band.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+          filter: `band_id=eq.${band.id}`,
+        },
+        async () => {
+          const { data: ev } = await supabase
+            .from('events')
+            .select('*')
+            .eq('band_id', band.id)
+            .eq('status', 'live')
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          setActiveEvent(ev || null);
+        }
+      )
+      .subscribe();
+
+    const profileChannel = supabase
+      .channel(`fan_profile_${band.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${band.id}`,
+        },
+        (payload) => {
+          setBand((prev) => ({ ...prev, ...payload.new }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventChannel);
+      supabase.removeChannel(profileChannel);
+    };
+  }, [band?.id]);
 
   // Realtime subscription for active fan request tracking
   useEffect(() => {
@@ -206,7 +269,17 @@ export default function FanLivePage() {
   const effectiveTip = customTipInput ? (parseFloat(customTipInput) || 0) : tipBoost;
   const breakdown = calculateFeeBreakdown(baseSongPrice, effectiveTip);
 
-  const isAcceptingRequests = band?.accepting_requests ?? true;
+  // Live Event Gating: Fans can only send song requests when a live gig session is active!
+  const isLiveEvent = Boolean(activeEvent && band?.accepting_requests !== false);
+  const isAcceptingRequests = isLiveEvent;
+
+  const handleSongClick = (song) => {
+    if (!isLiveEvent) {
+      toast('Live song requests are paused while the band is off-stage. Requests will open when the live set begins!', { icon: 'ℹ️' });
+      return;
+    }
+    handleOpenSongModal(song);
+  };
 
   // Filter songs
   const genres = ['all', ...Array.from(new Set(songs.map((s) => s.genre).filter(Boolean)))];
@@ -278,13 +351,13 @@ export default function FanLivePage() {
 
         {/* Live Status Pill */}
         <div style={{ marginBottom: '0.65rem' }}>
-          {isAcceptingRequests ? (
+          {isLiveEvent ? (
             <span className="badge badge-emerald" style={{ padding: '0.35rem 0.85rem' }}>
               <span className="live-pulse" /> ON STAGE • TAKING REQUESTS
             </span>
           ) : (
-            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-              ⏸️ SET BREAK • REQUESTS PAUSED
+            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '0.35rem 0.85rem' }}>
+              ⏸️ BAND IS OFF-STAGE / BETWEEN SETS
             </span>
           )}
         </div>
@@ -292,6 +365,42 @@ export default function FanLivePage() {
         <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#fff', marginBottom: '0.25rem' }}>
           {band.band_name}
         </h1>
+
+        {activeEvent && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            background: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.35)',
+            borderRadius: '20px',
+            padding: '0.3rem 0.85rem',
+            color: '#60a5fa',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            marginBottom: '0.65rem',
+          }}>
+            <span className="live-pulse" />
+            <span>LIVE SET: {activeEvent.title} {activeEvent.venue ? `• ${activeEvent.venue}` : ''}</span>
+          </div>
+        )}
+
+        {!isLiveEvent && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.6rem 0.85rem',
+            fontSize: '0.82rem',
+            color: '#fca5a5',
+            marginTop: '0.4rem',
+            marginBottom: '0.75rem',
+            textAlign: 'center',
+            lineHeight: 1.4,
+          }}>
+            <span>The band is currently between sets. Song requests will unlock once the live set begins!</span>
+          </div>
+        )}
 
         {band.genre && (
           <p style={{ fontSize: '0.875rem', color: '#60a5fa', fontWeight: 600, marginBottom: '0.75rem' }}>
@@ -491,7 +600,7 @@ export default function FanLivePage() {
                 )}
 
                 <div
-                  onClick={() => isAcceptingRequests && handleOpenSongModal(song)}
+                  onClick={() => handleSongClick(song)}
                   className="glass-card"
                   style={{
                     padding: '0.75rem 1rem',
@@ -499,8 +608,8 @@ export default function FanLivePage() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     gap: '0.85rem',
-                    cursor: isAcceptingRequests ? 'pointer' : 'not-allowed',
-                    opacity: isAcceptingRequests ? 1 : 0.6,
+                    cursor: isLiveEvent ? 'pointer' : 'default',
+                    opacity: isLiveEvent ? 1 : 0.75,
                     transition: 'transform 0.15s ease, border-color 0.15s ease',
                   }}
                 >
@@ -542,7 +651,7 @@ export default function FanLivePage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: '0.35rem' }}>
                   <div
-                    className="btn btn-primary btn-sm"
+                    className={isLiveEvent ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"}
                     style={{
                       padding: '0.45rem 0.75rem',
                       display: 'inline-flex',
@@ -552,11 +661,15 @@ export default function FanLivePage() {
                       borderRadius: '8px',
                       fontWeight: 800,
                       fontSize: '0.88rem',
-                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.35)'
+                      boxShadow: isLiveEvent ? '0 2px 8px rgba(59, 130, 246, 0.35)' : 'none',
+                      color: isLiveEvent ? '#fff' : 'var(--text-muted)',
+                      borderColor: isLiveEvent ? 'transparent' : 'rgba(255, 255, 255, 0.15)',
                     }}
                   >
                     <span>${price.toFixed(2)}</span>
-                    <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 600 }}>• Request</span>
+                    <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 600 }}>
+                      {isLiveEvent ? '• Request' : '• Off-Stage'}
+                    </span>
                     <ChevronRight size={13} />
                   </div>
                 </div>
@@ -799,18 +912,20 @@ export default function FanLivePage() {
                   bandStripeAccountId={band.stripe_account_id}
                   slug={effectiveSlug}
                   isDirectTip={false}
+                  eventId={activeEvent?.id || null}
                   onSuccess={(createdRequest) => {
-                    setIsModalOpen(false);
                     setSelectedSong(null);
+                    setIsCustomRequest(false);
                     setFanMessage('');
                     confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
                     toast.success('🎉 Song request submitted with Apple Pay / Card!');
                     if (createdRequest) {
-                      setActiveRequest(createdRequest);
+                      setActiveRequestTrack(createdRequest);
                     }
                   }}
                   onCancel={() => {
-                    setIsModalOpen(false);
+                    setSelectedSong(null);
+                    setIsCustomRequest(false);
                   }}
                 />
               </div>
@@ -951,6 +1066,7 @@ export default function FanLivePage() {
                     bandStripeAccountId={band.stripe_account_id}
                     slug={effectiveSlug}
                     isDirectTip={true}
+                    eventId={activeEvent?.id || null}
                     onSuccess={() => {
                       setShowDirectTipModal(false);
                       setFanMessage('');
