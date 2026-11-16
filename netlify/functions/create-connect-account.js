@@ -52,19 +52,27 @@ export const handler = async (event) => {
       // Create a fresh connected account per band through the API
       if (!isExisting) {
         let account = null;
+        const commonPayload = {
+          country: 'US',
+          email: email || undefined,
+          business_type: 'individual',
+          business_profile: {
+            name: bandName || 'Musician / Live Band',
+            mcc: '7929', // Bands, Orchestras, and Miscellaneous Entertainers
+            product_description: 'Live musical performances and fan song requests',
+            url: bandId ? `https://requestly.live/live/${bandId}` : 'https://requestly.live',
+          },
+          metadata: {
+            bandId: bandId || '',
+          },
+        };
+
         try {
           account = await stripe.accounts.create({
+            ...commonPayload,
             type: 'express',
-            country: 'US',
-            email: email || undefined,
-            business_type: 'individual',
             capabilities: {
               transfers: { requested: true },
-            },
-            business_profile: {
-              name: bandName || 'Musician / Live Band',
-              mcc: '7929', // Bands, Orchestras, and Miscellaneous Entertainers
-              product_description: 'Live musical performances and fan song requests',
             },
             settings: {
               payouts: {
@@ -74,35 +82,26 @@ export const handler = async (event) => {
                 },
               },
             },
-            metadata: {
-              bandId: bandId || '',
-            },
           });
         } catch (expressErr) {
-          console.warn('Express account creation failed, attempting Standard account creation:', expressErr.message);
+          console.warn('Express account creation failed, attempting Standard account creation with prefilled individual profile:', expressErr.message);
           account = await stripe.accounts.create({
+            ...commonPayload,
             type: 'standard',
-            country: 'US',
-            email: email || undefined,
-            business_profile: {
-              name: bandName || 'Musician / Live Band',
-              mcc: '7929',
-              url: `https://requestly.live/live/${bandId}`,
-            },
-            metadata: {
-              bandId: bandId || '',
-            },
           });
         }
         targetAccountId = account.id;
       }
 
-      // Generate hosted Stripe Express Account Link (NO Stripe login needed)
+      // Generate hosted Stripe Account Link (NO Stripe login needed, only currently due fields)
       const accountLink = await stripe.accountLinks.create({
         account: targetAccountId,
         refresh_url: `${origin}/settings?connect=refresh`,
         return_url: `${origin}/settings?connect=success&account_id=${targetAccountId}`,
         type: 'account_onboarding',
+        collection_options: {
+          fields: 'currently_due',
+        },
       });
 
       return {
