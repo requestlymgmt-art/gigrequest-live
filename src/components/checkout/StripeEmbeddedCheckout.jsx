@@ -154,12 +154,14 @@ export default function StripeEmbeddedCheckout({
         });
 
         const checkAvailableWallets = (methods) => {
-          if (!isMounted || !methods) return;
+          if (!isMounted) return;
+          if (!methods || Object.keys(methods).length === 0) {
+            setHasWallets(false);
+            return;
+          }
           const hasApple = methods.applePay === true || methods.applePay?.available === true;
           const hasGoogle = methods.googlePay === true || methods.googlePay?.available === true || (methods.googlePay && typeof methods.googlePay === 'object');
-          if (hasApple || hasGoogle) {
-            setHasWallets(true);
-          }
+          setHasWallets(Boolean(hasApple || hasGoogle));
         };
 
         expEl.on('availablepaymentmethodschange', (event) => {
@@ -168,13 +170,7 @@ export default function StripeEmbeddedCheckout({
 
         expEl.on('ready', ({ availablePaymentMethods }) => {
           checkAvailableWallets(availablePaymentMethods);
-          if (isMounted) {
-            // Default to true on mobile devices (Android / iOS) where express wallets are primary
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-            if (isMobile) {
-              setHasWallets(true);
-            }
-          }
+          if (isMounted) setLoading(false);
         });
 
         // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
@@ -487,8 +483,10 @@ export default function StripeEmbeddedCheckout({
 
       {/* 1. Native Apple Pay & Google Pay (Express Checkout) */}
       <div style={{
-        display: loading ? 'none' : 'block',
-        marginBottom: hasWallets ? '0.75rem' : '0'
+        display: (!loading && hasWallets) ? 'block' : 'none',
+        marginBottom: hasWallets ? '0.75rem' : '0',
+        height: hasWallets ? 'auto' : 0,
+        overflow: 'hidden',
       }}>
         <div
           ref={expressContainerRef}
@@ -496,25 +494,27 @@ export default function StripeEmbeddedCheckout({
         />
       </div>
 
-      {/* 2. "OR PAY WITH CARD" Divider */}
-      <div style={{
-        display: (!loading && hasWallets) ? 'flex' : 'none',
-        alignItems: 'center',
-        margin: '0.85rem 0',
-        gap: '0.75rem'
-      }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
-        <span style={{
-          color: 'var(--text-dim)',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
+      {/* 2. "OR PAY WITH CARD" Divider — Only rendered when a wallet is genuinely present */}
+      {hasWallets && !loading && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          margin: '0.85rem 0',
+          gap: '0.75rem'
         }}>
-          Or Pay with Card
-        </span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
-      </div>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
+          <span style={{
+            color: 'var(--text-dim)',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}>
+            Or Pay with Card
+          </span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.12)' }} />
+        </div>
+      )}
 
       {/* 3. Dedicated Card Element Input Box — ALWAYS IN DOM */}
       <div style={{
