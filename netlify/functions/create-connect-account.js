@@ -49,33 +49,51 @@ export const handler = async (event) => {
         }
       }
 
-      // Create a fresh Express account per band through the API
+      // Create a fresh connected account per band through the API
       if (!isExisting) {
-        const account = await stripe.accounts.create({
-          type: 'express',
-          country: 'US',
-          email: email || undefined,
-          business_type: 'individual',
-          capabilities: {
-            transfers: { requested: true },
-          },
-          business_profile: {
-            name: bandName || 'Musician / Live Band',
-            mcc: '7929', // Bands, Orchestras, and Miscellaneous Entertainers
-            product_description: 'Live musical performances and fan song requests',
-          },
-          settings: {
-            payouts: {
-              schedule: {
-                interval: 'daily',
-                delay_days: 2, // Standard 2-business-day rolling bank payouts
+        let account = null;
+        try {
+          account = await stripe.accounts.create({
+            type: 'express',
+            country: 'US',
+            email: email || undefined,
+            business_type: 'individual',
+            capabilities: {
+              transfers: { requested: true },
+            },
+            business_profile: {
+              name: bandName || 'Musician / Live Band',
+              mcc: '7929', // Bands, Orchestras, and Miscellaneous Entertainers
+              product_description: 'Live musical performances and fan song requests',
+            },
+            settings: {
+              payouts: {
+                schedule: {
+                  interval: 'daily',
+                  delay_days: 2, // Standard 2-business-day rolling bank payouts
+                },
               },
             },
-          },
-          metadata: {
-            bandId: bandId || '',
-          },
-        });
+            metadata: {
+              bandId: bandId || '',
+            },
+          });
+        } catch (expressErr) {
+          console.warn('Express account creation failed, attempting Standard account creation:', expressErr.message);
+          account = await stripe.accounts.create({
+            type: 'standard',
+            country: 'US',
+            email: email || undefined,
+            business_profile: {
+              name: bandName || 'Musician / Live Band',
+              mcc: '7929',
+              url: `https://requestly.live/live/${bandId}`,
+            },
+            metadata: {
+              bandId: bandId || '',
+            },
+          });
+        }
         targetAccountId = account.id;
       }
 
