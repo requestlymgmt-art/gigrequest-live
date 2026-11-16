@@ -685,10 +685,8 @@ export default function Setlist() {
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             position: 'relative',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.35rem',
-            padding: '0.4rem',
+            paddingLeft: filteredSongs.length >= 6 ? '1.5rem' : '0',
+            transition: 'padding-left 0.2s ease',
           }}
         >
           {/* Alphabet Fast Scroll on Left */}
@@ -696,10 +694,10 @@ export default function Setlist() {
             songs={filteredSongs}
             side="left"
             offset={100}
+            containerId="setlist-songs-container"
           />
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {filteredSongs.map((song, idx) => {
+          {filteredSongs.map((song, idx) => {
             const isEditing = editingSongId === song.id;
             const letter = (song.title || '').trim().charAt(0).toUpperCase();
             const groupLetter = /[A-Z]/.test(letter) ? letter : '#';
@@ -867,7 +865,6 @@ export default function Setlist() {
             </div>
           );
           })}
-          </div>
         </div>
       )}
 

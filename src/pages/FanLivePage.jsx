@@ -524,26 +524,28 @@ export default function FanLivePage() {
         )}
       </div>
 
-      {/* Song Catalog List with Alphabet Fast Scroll strictly kept within the song section */}
+      {/* Song Catalog List with Alphabet Fast Scroll */}
       <div
         id="song-list-container"
         style={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: '0.35rem',
+          flexDirection: 'column',
+          gap: '0.65rem',
           marginBottom: '1.5rem',
           position: 'relative',
+          paddingLeft: filteredSongs.length >= 6 ? '1.5rem' : '0',
+          transition: 'padding-left 0.2s ease',
         }}
       >
-        {/* Fast Alphabetical Cursor on Left Side (Strictly kept inside the song list) */}
+        {/* Fast Alphabetical Cursor on Left Side (Fixed and follows as you scroll songs) */}
         <AlphabetFastScroll
           songs={filteredSongs}
           side="left"
-          offset={100}
+          offset={110}
+          containerId="song-list-container"
         />
 
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-          {filteredSongs.length === 0 ? (
+        {filteredSongs.length === 0 ? (
             <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
                 No matching songs found in the live setlist.
@@ -676,7 +678,6 @@ export default function FanLivePage() {
             );
           })
         )}
-        </div>
       </div>
 
       {/* Custom Song Request Option (If band allows) */}
