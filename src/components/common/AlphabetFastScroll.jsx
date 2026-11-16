@@ -42,8 +42,8 @@ export default function AlphabetFastScroll({
     return arr;
   }, [songs, minSongs]);
 
-  // Track scroll position so cursor is ONLY visible while browsing the song list
-  // It stays completely hidden when the user is viewing the hero/bio section above
+  // Track scroll position so cursor is ONLY visible while actively browsing the song list
+  // It stays strictly hidden when viewing the profile header/bio/tip section above
   useEffect(() => {
     const handleScroll = () => {
       const container = containerId
@@ -58,10 +58,10 @@ export default function AlphabetFastScroll({
       const rect = container.getBoundingClientRect();
       const vh = window.innerHeight;
 
-      // The cursor sits at vertical center (top: 50% = vh * 0.5)
-      // Active ONLY when the song list covers the vertical viewing area
-      // When user is scrolled to top (bio/hero profile card), rect.top > vh * 0.4, so inView is false!
-      const inView = rect.top <= vh * 0.42 && rect.bottom >= vh * 0.22;
+      // The alphabet strip must ONLY appear once the songs have scrolled up into view
+      // and the bio/hero card above has scrolled off screen (rect.top <= 90)
+      // When at the top of the profile, rect.top is > 200px, so inView is FALSE!
+      const inView = rect.top <= 90 && rect.bottom >= 160;
       setIsVisible(inView);
     };
 

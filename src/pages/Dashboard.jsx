@@ -68,6 +68,7 @@ export default function Dashboard() {
         .from('requests')
         .select('*')
         .eq('band_id', effectiveBandId)
+        .in('payment_status', ['authorized', 'paid'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -96,20 +97,47 @@ export default function Dashboard() {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setRequests((prev) => [payload.new, ...prev]);
-            playChime();
-            confetti({
-              particleCount: 50,
-              spread: 60,
-              origin: { y: 0.7 },
-            });
-            toast.success(`🎵 New request: ${payload.new.song_title} from ${payload.new.fan_name}!`, {
-              duration: 5000,
-            });
+            // ONLY show and chime if the payment or authorization hold is confirmed!
+            if (payload.new.payment_status === 'authorized' || payload.new.payment_status === 'paid') {
+              setRequests((prev) => {
+                if (prev.some((r) => r.id === payload.new.id)) return prev;
+                return [payload.new, ...prev];
+              });
+              playChime();
+              confetti({
+                particleCount: 50,
+                spread: 60,
+                origin: { y: 0.7 },
+              });
+              toast.success(`🎵 New request: ${payload.new.song_title} from ${payload.new.fan_name}!`, {
+                duration: 5000,
+              });
+            }
           } else if (payload.eventType === 'UPDATE') {
-            setRequests((prev) =>
-              prev.map((r) => (r.id === payload.new.id ? payload.new : r))
-            );
+            setRequests((prev) => {
+              const exists = prev.some((r) => r.id === payload.new.id);
+
+              // If payment just got confirmed (via webhook or client confirm), add and chime!
+              if (!exists && (payload.new.payment_status === 'authorized' || payload.new.payment_status === 'paid')) {
+                playChime();
+                confetti({
+                  particleCount: 50,
+                  spread: 60,
+                  origin: { y: 0.7 },
+                });
+                toast.success(`🎵 New request: ${payload.new.song_title} from ${payload.new.fan_name}!`, {
+                  duration: 5000,
+                });
+                return [payload.new, ...prev];
+              }
+
+              // If payment failed or was cancelled, remove from view so performer never sees it
+              if (payload.new.payment_status === 'failed' || payload.new.payment_status === 'cancelled') {
+                return prev.filter((r) => r.id !== payload.new.id);
+              }
+
+              return prev.map((r) => (r.id === payload.new.id ? payload.new : r));
+            });
           } else if (payload.eventType === 'DELETE') {
             setRequests((prev) => prev.filter((r) => r.id === payload.old.id));
           }

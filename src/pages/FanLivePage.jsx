@@ -23,6 +23,7 @@ import { calculateFeeBreakdown, processStripePayment, getAvailableWallets, creat
 import SongArtwork from '../components/common/SongArtwork';
 import SongGenreBadge from '../components/common/SongGenreBadge';
 import AlphabetFastScroll from '../components/common/AlphabetFastScroll';
+import StripeEmbeddedCheckout from '../components/checkout/StripeEmbeddedCheckout';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 
@@ -94,9 +95,6 @@ export default function FanLivePage() {
 
   // Payment states
   const [wallets] = useState(() => getAvailableWallets());
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [processingMethod, setProcessingMethod] = useState('');
-  const [showCardDetails, setShowCardDetails] = useState(false);
   const [activeRequestTrack, setActiveRequestTrack] = useState(null);
 
   // Direct Tip Modal (without song)
@@ -207,149 +205,6 @@ export default function FanLivePage() {
 
   const effectiveTip = customTipInput ? (parseFloat(customTipInput) || 0) : tipBoost;
   const breakdown = calculateFeeBreakdown(baseSongPrice, effectiveTip);
-
-  // Submit and pay for song request with real Stripe Checkout (Apple Pay, Google Pay, Cards)
-  const handlePaySongRequest = async (e, chosenMethod = null) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!band) return;
-
-    const method = chosenMethod || (wallets.preferred === 'apple_pay' ? 'apple_pay' : 'google_pay');
-
-    const songTitle = isCustomRequest ? customSongTitle.trim() : selectedSong?.title;
-    const songArtist = isCustomRequest ? customSongArtist.trim() : selectedSong?.artist;
-
-    if (!songTitle) {
-      toast.error('Please enter the song title');
-      return;
-    }
-
-    setProcessingPayment(true);
-    setProcessingMethod(method);
-
-    try {
-      // 1. Insert into Supabase requests table as 'initiating'
-      const { data: newRequest, error: reqError } = await supabase
-        .from('requests')
-        .insert({
-          band_id: band.id,
-          song_id: selectedSong?.id || null,
-          song_title: songTitle,
-          song_artist: songArtist || 'Custom Song',
-          fan_name: fanName.trim() || 'Anonymous Fan',
-          fan_message: fanMessage.trim(),
-          song_price: breakdown.baseAmount,
-          tip_amount: breakdown.tipAmount,
-          fan_fee: breakdown.fanFee,
-          total_paid: breakdown.totalCharged,
-          status: 'pending',
-          payment_status: 'initiating', // Confirmed on Stripe return
-          payment_method: method,
-        })
-        .select()
-        .single();
-
-      if (reqError) throw reqError;
-
-      // 2. Redirect to real-money Stripe Checkout with authorization hold
-      const checkoutRes = await createStripeCheckoutRedirect({
-        amount: breakdown.totalCharged,
-        artistNet: breakdown.subtotal,
-        requestlyFee: breakdown.requestlyFee,
-        fanFee: breakdown.fanFee,
-        songPrice: breakdown.baseAmount,
-        tipAmount: breakdown.tipAmount,
-        bandStripeAccountId: band.stripe_account_id,
-        songTitle,
-        songArtist: songArtist || '',
-        fanName: fanName.trim() || 'Anonymous Fan',
-        fanMessage: fanMessage.trim(),
-        bandId: band.id,
-        slug: effectiveSlug,
-        isDirectTip: false,
-        requestId: newRequest.id,
-      });
-
-      if (!checkoutRes.success) {
-        await supabase.from('requests').delete().eq('id', newRequest.id);
-        toast.error('Could not connect to Stripe secure checkout. Please try again.');
-        setProcessingPayment(false);
-        setProcessingMethod('');
-      }
-    } catch (err) {
-      console.error('Payment initiation error:', err);
-      toast.error('Payment failed. Please try again.');
-      setProcessingPayment(false);
-      setProcessingMethod('');
-    }
-  };
-
-  // Direct Tip Submission (Captured immediately since it's a voluntary gift to the band)
-  const handlePayDirectTip = async (e, chosenMethod = null) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!band) return;
-
-    const method = chosenMethod || (wallets.preferred === 'apple_pay' ? 'apple_pay' : 'google_pay');
-    const tipVal = Math.max(1, parseFloat(directTipAmount) || 5);
-    const directBreakdown = calculateFeeBreakdown(0, tipVal);
-
-    setProcessingPayment(true);
-    setProcessingMethod(method);
-
-    try {
-      // 1. Insert into Supabase requests table as 'initiating'
-      const { data: newTip, error: tipError } = await supabase
-        .from('requests')
-        .insert({
-          band_id: band.id,
-          song_title: '💖 Direct Tip to the Band',
-          song_artist: 'Thank You!',
-          fan_name: fanName.trim() || 'Generous Fan',
-          fan_message: fanMessage.trim(),
-          song_price: 0,
-          tip_amount: tipVal,
-          fan_fee: directBreakdown.fanFee,
-          total_paid: directBreakdown.totalCharged,
-          status: 'pending',
-          payment_status: 'initiating',
-          payment_method: method,
-        })
-        .select()
-        .single();
-
-      if (tipError) throw tipError;
-
-      // 2. Redirect to real-money Stripe Checkout with immediate capture
-      const checkoutRes = await createStripeCheckoutRedirect({
-        amount: directBreakdown.totalCharged,
-        artistNet: tipVal,
-        requestlyFee: directBreakdown.requestlyFee,
-        fanFee: directBreakdown.fanFee,
-        songPrice: 0,
-        tipAmount: tipVal,
-        bandStripeAccountId: band.stripe_account_id,
-        songTitle: 'Direct Musician Tip 💖',
-        songArtist: 'Band Tip',
-        fanName: fanName.trim() || 'Generous Fan',
-        fanMessage: fanMessage.trim(),
-        bandId: band.id,
-        slug: effectiveSlug,
-        isDirectTip: true,
-        requestId: newTip.id,
-      });
-
-      if (!checkoutRes.success) {
-        await supabase.from('requests').delete().eq('id', newTip.id);
-        toast.error('Could not connect to Stripe secure checkout. Please try again.');
-        setProcessingPayment(false);
-        setProcessingMethod('');
-      }
-    } catch (err) {
-      console.error('Tip payment error:', err);
-      toast.error('Payment failed');
-      setProcessingPayment(false);
-      setProcessingMethod('');
-    }
-  };
 
   const isAcceptingRequests = band?.accepting_requests ?? true;
 
@@ -775,7 +630,7 @@ export default function FanLivePage() {
               </button>
             </div>
 
-            <form onSubmit={handlePaySongRequest}>
+            <form onSubmit={(e) => e.preventDefault()}>
               {/* If custom request, input fields for title & artist */}
               {isCustomRequest && (
                 <div style={{ marginBottom: '1rem' }}>
@@ -926,149 +781,38 @@ export default function FanLivePage() {
                 </div>
               </div>
 
-              {/* REAL PRODUCTION CHECKOUT (APPLE PAY, GOOGLE PAY & CARDS) */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--accent-blue)',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  marginBottom: '0.65rem'
-                }}>
-                  <Zap size={14} fill="currentColor" /> Select Secure Payment Method
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {/* Apple Pay Button */}
-                  <button
-                    type="button"
-                    disabled={processingPayment}
-                    onClick={(e) => handlePaySongRequest(e, 'apple_pay')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.6rem',
-                      width: '100%',
-                      background: '#000000',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      padding: '0.85rem 1.25rem',
-                      fontSize: '1.05rem',
-                      fontWeight: 700,
-                      cursor: processingPayment ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
-                      transition: 'all 0.15s ease',
-                      opacity: processingPayment && processingMethod !== 'apple_pay' ? 0.5 : 1,
-                    }}
-                  >
-                    {processingPayment && processingMethod === 'apple_pay' ? (
-                      <span>Opening Secure Apple Pay...</span>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: '1.35rem', lineHeight: 1 }}></span>
-                        <span>Pay with <strong>Apple Pay</strong></span>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                          ${breakdown.totalCharged.toFixed(2)}
-                        </span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* Google Pay Button */}
-                  <button
-                    type="button"
-                    disabled={processingPayment}
-                    onClick={(e) => handlePaySongRequest(e, 'google_pay')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.6rem',
-                      width: '100%',
-                      background: '#111827',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      padding: '0.85rem 1.25rem',
-                      fontSize: '1.05rem',
-                      fontWeight: 700,
-                      cursor: processingPayment ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
-                      transition: 'all 0.15s ease',
-                      opacity: processingPayment && processingMethod !== 'google_pay' ? 0.5 : 1,
-                    }}
-                  >
-                    {processingPayment && processingMethod === 'google_pay' ? (
-                      <span>Opening Secure Google Pay...</span>
-                    ) : (
-                      <>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                        </svg>
-                        <span>Pay with <strong>Google Pay</strong></span>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                          ${breakdown.totalCharged.toFixed(2)}
-                        </span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* Credit / Debit Card Button */}
-                  <button
-                    type="button"
-                    disabled={processingPayment}
-                    onClick={(e) => handlePaySongRequest(e, 'card')}
-                    className="btn btn-outline btn-lg"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.6rem',
-                      width: '100%',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      padding: '0.85rem 1.25rem',
-                      borderColor: 'rgba(59, 130, 246, 0.4)',
-                      background: 'rgba(59, 130, 246, 0.08)',
-                      color: '#ffffff',
-                    }}
-                  >
-                    {processingPayment && processingMethod === 'card' ? (
-                      <span>Opening Secure Card Checkout...</span>
-                    ) : (
-                      <>
-                        <CreditCard size={18} color="#60a5fa" />
-                        <span>Pay with <strong>Credit / Debit Card</strong></span>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                          ${breakdown.totalCharged.toFixed(2)}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.45rem',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-dim)',
-                  marginTop: '0.75rem',
-                  textAlign: 'center'
-                }}>
-                  <ShieldCheck size={14} color="#10b981" />
-                  <span>🔒 Real 256-Bit SSL Encrypted • Zero-Risk Pre-Authorized Hold</span>
-                </div>
+              {/* EMBEDDED STRIPE CHECKOUT: NATIVE APPLE PAY, GOOGLE PAY & CARDS */}
+              <div style={{ marginBottom: '0.75rem' }}>
+                <StripeEmbeddedCheckout
+                  amount={breakdown.totalCharged}
+                  artistNet={breakdown.subtotal}
+                  requestlyFee={breakdown.requestlyFee}
+                  fanFee={breakdown.fanFee}
+                  stripeFee={breakdown.stripeFee}
+                  tipAmount={breakdown.tipAmount}
+                  songPrice={breakdown.baseAmount}
+                  songTitle={isCustomRequest ? customSongTitle.trim() : (selectedSong?.title || 'Song Request')}
+                  songArtist={isCustomRequest ? customSongArtist.trim() : (selectedSong?.artist || '')}
+                  fanName={fanName.trim() || 'Anonymous Fan'}
+                  fanMessage={fanMessage.trim()}
+                  bandId={band.id}
+                  bandStripeAccountId={band.stripe_account_id}
+                  slug={effectiveSlug}
+                  isDirectTip={false}
+                  onSuccess={(createdRequest) => {
+                    setIsModalOpen(false);
+                    setSelectedSong(null);
+                    setFanMessage('');
+                    confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                    toast.success('🎉 Song request submitted with Apple Pay / Card!');
+                    if (createdRequest) {
+                      setActiveRequest(createdRequest);
+                    }
+                  }}
+                  onCancel={() => {
+                    setIsModalOpen(false);
+                  }}
+                />
               </div>
             </form>
           </div>
@@ -1095,7 +839,7 @@ export default function FanLivePage() {
                 </button>
               </div>
 
-              <form onSubmit={handlePayDirectTip}>
+              <form onSubmit={(e) => e.preventDefault()}>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label className="label">Choose Tip Amount ($)</label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -1189,149 +933,34 @@ export default function FanLivePage() {
                   </div>
                 </div>
 
-                {/* REAL PRODUCTION CHECKOUT FOR TIP */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    color: '#f59e0b',
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                    marginBottom: '0.65rem'
-                  }}>
-                    <Zap size={14} fill="currentColor" /> Select Secure Tip Method
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    {/* Apple Pay Button */}
-                    <button
-                      type="button"
-                      disabled={processingPayment}
-                      onClick={(e) => handlePayDirectTip(e, 'apple_pay')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.6rem',
-                        width: '100%',
-                        background: '#000000',
-                        color: '#ffffff',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
-                        padding: '0.85rem 1.25rem',
-                        fontSize: '1.05rem',
-                        fontWeight: 700,
-                        cursor: processingPayment ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
-                        transition: 'all 0.15s ease',
-                        opacity: processingPayment && processingMethod !== 'apple_pay' ? 0.5 : 1,
-                      }}
-                    >
-                      {processingPayment && processingMethod === 'apple_pay' ? (
-                        <span>Opening Secure Apple Pay...</span>
-                      ) : (
-                        <>
-                          <span style={{ fontSize: '1.35rem', lineHeight: 1 }}></span>
-                          <span>Tip with <strong>Apple Pay</strong></span>
-                          <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                            ${liveBreakdown.totalCharged.toFixed(2)}
-                          </span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Google Pay Button */}
-                    <button
-                      type="button"
-                      disabled={processingPayment}
-                      onClick={(e) => handlePayDirectTip(e, 'google_pay')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.6rem',
-                        width: '100%',
-                        background: '#111827',
-                        color: '#ffffff',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
-                        padding: '0.85rem 1.25rem',
-                        fontSize: '1.05rem',
-                        fontWeight: 700,
-                        cursor: processingPayment ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
-                        transition: 'all 0.15s ease',
-                        opacity: processingPayment && processingMethod !== 'google_pay' ? 0.5 : 1,
-                      }}
-                    >
-                      {processingPayment && processingMethod === 'google_pay' ? (
-                        <span>Opening Secure Google Pay...</span>
-                      ) : (
-                        <>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                          </svg>
-                          <span>Tip with <strong>Google Pay</strong></span>
-                          <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                            ${liveBreakdown.totalCharged.toFixed(2)}
-                          </span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Credit / Debit Card Button */}
-                    <button
-                      type="button"
-                      disabled={processingPayment}
-                      onClick={(e) => handlePayDirectTip(e, 'card')}
-                      className="btn btn-outline btn-lg"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.6rem',
-                        width: '100%',
-                        fontSize: '1rem',
-                        fontWeight: 700,
-                        padding: '0.85rem 1.25rem',
-                        borderColor: 'rgba(245, 158, 11, 0.4)',
-                        background: 'rgba(245, 158, 11, 0.08)',
-                        color: '#ffffff',
-                      }}
-                    >
-                      {processingPayment && processingMethod === 'card' ? (
-                        <span>Opening Secure Card Checkout...</span>
-                      ) : (
-                        <>
-                          <CreditCard size={18} color="#f59e0b" />
-                          <span>Tip with <strong>Credit / Debit Card</strong></span>
-                          <span style={{ marginLeft: 'auto', fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>
-                            ${liveBreakdown.totalCharged.toFixed(2)}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-dim)',
-                    marginTop: '0.75rem',
-                    textAlign: 'center'
-                  }}>
-                    <ShieldCheck size={14} color="#10b981" />
-                    <span>🔒 Real 256-Bit SSL Encrypted • Direct Musician Payout</span>
-                  </div>
+                {/* EMBEDDED STRIPE CHECKOUT FOR TIP */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <StripeEmbeddedCheckout
+                    amount={liveBreakdown.totalCharged}
+                    artistNet={liveTipVal}
+                    requestlyFee={liveBreakdown.requestlyFee}
+                    fanFee={liveBreakdown.fanFee}
+                    stripeFee={liveBreakdown.stripeFee}
+                    tipAmount={liveTipVal}
+                    songPrice={0}
+                    songTitle="💖 Direct Tip to the Band"
+                    songArtist="Thank You!"
+                    fanName={fanName.trim() || 'Generous Fan'}
+                    fanMessage={fanMessage.trim()}
+                    bandId={band.id}
+                    bandStripeAccountId={band.stripe_account_id}
+                    slug={effectiveSlug}
+                    isDirectTip={true}
+                    onSuccess={() => {
+                      setShowDirectTipModal(false);
+                      setFanMessage('');
+                      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+                      toast.success('🎉 Tip sent directly to the band! Thank you!');
+                    }}
+                    onCancel={() => {
+                      setShowDirectTipModal(false);
+                    }}
+                  />
                 </div>
               </form>
             </div>

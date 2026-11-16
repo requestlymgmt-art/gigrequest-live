@@ -33,6 +33,7 @@ export default function StageMode() {
         .select('*')
         .eq('band_id', effectiveBandId)
         .in('status', ['playing', 'up_next', 'pending'])
+        .in('payment_status', ['authorized', 'paid'])
         .order('created_at', { ascending: true });
 
       if (error) throw error;
