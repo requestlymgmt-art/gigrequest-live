@@ -125,7 +125,7 @@ export default function StripeEmbeddedCheckout({
           mode: 'payment',
           amount: amountInCents,
           currency: 'usd',
-          captureMethod: isDirectTip ? 'automatic' : 'manual',
+          captureMethod: 'automatic',
           appearance: {
             theme: 'night',
             variables: {
@@ -174,10 +174,19 @@ export default function StripeEmbeddedCheckout({
         });
 
         // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
-        expEl.on('confirm', async (event) => {
+        expEl.on('confirm', async () => {
           setProcessing(true);
           const p = propsRef.current;
           try {
+            // 1. Validate & submit elements
+            const { error: submitError } = await expElements.submit();
+            if (submitError) {
+              setErrorMessage(submitError.message || 'Validation failed');
+              toast.error(submitError.message || 'Validation failed');
+              return;
+            }
+
+            // 2. Create PaymentIntent
             const piRes = await fetch('/.netlify/functions/create-payment-intent', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -191,6 +200,8 @@ export default function StripeEmbeddedCheckout({
                 bandStripeAccountId: p.bandStripeAccountId,
                 songTitle: p.songTitle,
                 songArtist: p.songArtist,
+                songPrice: p.songPrice,
+                tipAmount: p.tipAmount,
                 fanName: p.fanName.trim() || 'Anonymous Fan',
                 fanMessage: p.fanMessage.trim(),
                 isDirectTip: p.isDirectTip,
@@ -203,6 +214,7 @@ export default function StripeEmbeddedCheckout({
               throw new Error(piData.error || 'Failed to initialize payment');
             }
 
+            // 3. Confirm payment with Stripe (handles native Apple Pay & Google Pay)
             const { error, paymentIntent } = await stripe.confirmPayment({
               elements: expElements,
               clientSecret: piData.clientSecret,
@@ -213,12 +225,11 @@ export default function StripeEmbeddedCheckout({
             });
 
             if (error) {
-              event.complete('fail');
               setErrorMessage(error.message || 'Payment authorization failed');
               toast.error(error.message || 'Payment failed');
             } else {
-              event.complete('success');
-              const { data: newReq } = await supabase
+              // 4. Save confirmed request in Supabase
+              const { data: newReq, error: insertError } = await supabase
                 .from('requests')
                 .insert({
                   band_id: p.bandId,
@@ -232,24 +243,27 @@ export default function StripeEmbeddedCheckout({
                   fan_fee: Number(p.fanFee || 0),
                   total_paid: Number(p.amount),
                   status: p.isDirectTip ? 'completed' : 'pending',
-                  payment_status: p.isDirectTip ? 'paid' : 'authorized',
+                  payment_status: 'paid',
                   payment_method: paymentIntent?.payment_method_types?.[0] || 'apple_pay',
                   stripe_payment_id: paymentIntent?.id || piData.paymentIntentId,
                 })
                 .select()
                 .single();
 
+              if (insertError) {
+                console.error('Supabase insert error:', insertError);
+              }
+
               const walletType = paymentIntent?.charges?.data?.[0]?.payment_method_details?.card?.wallet?.type ||
                 paymentIntent?.payment_method_types?.[0] || 'express_wallet';
               const walletLabel = walletType.includes('google') ? 'Google Pay' : 'Apple Pay';
 
               confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-              toast.success(`🎉 Real payment authorized with ${walletLabel}!`);
+              toast.success(`🎉 Payment completed with ${walletLabel}!`);
               if (onSuccess) onSuccess(newReq);
             }
           } catch (err) {
             console.error('Express Checkout error:', err);
-            event.complete('fail');
             setErrorMessage(err.message || 'Payment failed');
             toast.error(err.message || 'Payment failed');
           } finally {
@@ -420,7 +434,7 @@ export default function StripeEmbeddedCheckout({
             fan_fee: Number(p.fanFee || 0),
             total_paid: Number(p.amount),
             status: p.isDirectTip ? 'completed' : 'pending',
-            payment_status: p.isDirectTip ? 'paid' : 'authorized',
+            payment_status: 'paid',
             payment_method: 'card',
             stripe_payment_id: paymentIntent.id,
           })
@@ -431,7 +445,7 @@ export default function StripeEmbeddedCheckout({
         toast.success(
           p.isDirectTip
             ? '🎉 Tip sent successfully to the band!'
-            : '🎉 Song request authorized & sent to stage!'
+            : '🎉 Song request submitted & sent to the stage!'
         );
         if (onSuccess) onSuccess(newReq);
       }

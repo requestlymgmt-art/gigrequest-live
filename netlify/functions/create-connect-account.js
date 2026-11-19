@@ -72,6 +72,7 @@ export const handler = async (event) => {
             ...commonPayload,
             type: 'express',
             capabilities: {
+              card_payments: { requested: true },
               transfers: { requested: true },
             },
             settings: {

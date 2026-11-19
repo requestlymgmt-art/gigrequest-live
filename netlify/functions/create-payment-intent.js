@@ -58,8 +58,8 @@ export const handler = async (event) => {
       const paymentIntentParams = {
         amount: amountInCents,
         currency: currency.toLowerCase(),
-        // Song requests place an authorization hold; fan is ONLY charged when band accepts!
-        capture_method: isDirectTip ? 'automatic' : 'manual',
+        // All payments (song requests and tips) are captured automatically on checkout
+        capture_method: 'automatic',
         automatic_payment_methods: {
           enabled: true, // Enables Apple Pay, Google Pay, and Credit Cards automatically
         },
@@ -68,7 +68,12 @@ export const handler = async (event) => {
           : `Song Request: "${songTitle}" by ${fanName || 'Fan'}`,
         metadata: {
           songTitle: songTitle || '',
+          songArtist: body.songArtist || '',
           fanName: fanName || 'Anonymous Fan',
+          fanMessage: body.fanMessage || '',
+          songPrice: (body.songPrice || 0).toString(),
+          tipAmount: (body.tipAmount || 0).toString(),
+          fanFee: (body.fanFee || 0).toString(),
           bandId: bandId || '',
           eventId: eventId || '',
           isDirectTip: isDirectTip ? 'true' : 'false',

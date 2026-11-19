@@ -6,7 +6,7 @@ const PROD_KEY = typeof atob === 'function'
   ? atob('cGtfbGl2ZV81MVVVTG5HSHFhOTR3OHZOZGdIQktQeFdiWGcyT1poejlhdTZnVVNIQUw0eDRQZk9yU0pqVkJGUlFqZnFlTmRlc2JEN2VaOUVsN093cGJqbEZjZlVKQkpiWDAwNFdyVTloR28=')
   : '';
 
-export const STRIPE_LIVE_PUBLISHABLE_KEY = 
+export const STRIPE_LIVE_PUBLISHABLE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || PROD_KEY;
 
 export function calculateFeeBreakdown(baseAmount, tipAmount = 0) {
@@ -303,4 +303,23 @@ export async function initiateStripeConnectOnboarding({ bandId, bandName, email,
       error: err.message || 'Network error connecting to Stripe',
     };
   }
+}
+
+/**
+ * Verify whether band's connected account is ready for payouts
+ */
+export async function verifyStripeConnectAccount(accountId) {
+  try {
+    const res = await fetch('/.netlify/functions/verify-connect-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.error('Verify Connect account error:', err);
+  }
+  return { success: false };
 }

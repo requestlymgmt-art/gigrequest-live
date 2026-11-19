@@ -90,7 +90,7 @@ export const handler = async (event) => {
           isDirectTip: isDirectTip ? 'true' : 'false',
         },
         payment_intent_data: {
-          capture_method: isDirectTip ? 'automatic' : 'manual',
+          capture_method: 'automatic',
           description: isDirectTip
             ? `Direct Tip from ${fanName}`
             : `Song Request: "${songTitle}" by ${fanName}`,

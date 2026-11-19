@@ -35,7 +35,7 @@ export const handler = async (event) => {
 
   let stripeEvent;
   const sig = event.headers['stripe-signature'] || event.headers['Stripe-Signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_JNdaJwqNSMgWnRBJj6dkNKZTMFY12ZLY';
 
   try {
     if (stripe && webhookSecret && sig) {
@@ -53,7 +53,7 @@ export const handler = async (event) => {
     const eventType = stripeEvent.type;
     console.log(`[Stripe Webhook] Received event: ${eventType}`);
 
-    // 1. Authorization hold placed successfully (Song Requests)
+    // 1. Authorization hold placed successfully (Fallback if manual capture ever used)
     if (eventType === 'payment_intent.amount_capturable_updated') {
       const pi = stripeEvent.data.object;
       const meta = pi.metadata || {};
@@ -97,7 +97,7 @@ export const handler = async (event) => {
       }
     }
 
-    // 2. Direct Tips or Captured Payments Succeeded
+    // 2. Payments Succeeded (Automatic Capture for Song Requests & Direct Tips)
     else if (eventType === 'payment_intent.succeeded') {
       const pi = stripeEvent.data.object;
       const meta = pi.metadata || {};
@@ -108,11 +108,12 @@ export const handler = async (event) => {
           .from('requests')
           .update({
             payment_status: 'paid',
-            status: meta.isDirectTip === 'true' ? 'completed' : undefined,
+            status: meta.isDirectTip === 'true' ? 'completed' : 'pending',
             stripe_payment_id: pi.id,
           })
           .eq('id', requestId);
-      } else if (meta.isDirectTip === 'true' && meta.bandId) {
+      } else if (meta.bandId) {
+        // Double-safety: If client didn't insert yet or browser closed, insert now
         const { data: existing } = await supabase
           .from('requests')
           .select('id')
@@ -120,22 +121,29 @@ export const handler = async (event) => {
           .maybeSingle();
 
         if (!existing) {
+          const isTip = meta.isDirectTip === 'true';
           await supabase.from('requests').insert({
             band_id: meta.bandId,
             event_id: meta.eventId || null,
-            song_title: '💖 Direct Tip to the Band',
-            song_artist: 'Thank You!',
-            fan_name: meta.fanName || 'Generous Fan',
+            song_title: isTip ? '💖 Direct Tip to the Band' : (meta.songTitle || 'Song Request'),
+            song_artist: isTip ? 'Thank You!' : (meta.songArtist || ''),
+            fan_name: meta.fanName || 'Anonymous Fan',
             fan_message: meta.fanMessage || '',
-            song_price: 0,
-            tip_amount: Number(meta.tipAmount || Number(pi.amount) / 100),
+            song_price: Number(meta.songPrice || 0),
+            tip_amount: Number(meta.tipAmount || (isTip ? Number(pi.amount) / 100 : 0)),
             fan_fee: Number(meta.fanFee || 0),
             total_paid: Number(pi.amount) / 100,
-            status: 'completed',
+            status: isTip ? 'completed' : 'pending',
             payment_status: 'paid',
             payment_method: pi.payment_method_types?.[0] || 'apple_pay',
             stripe_payment_id: pi.id,
           });
+          console.log(`[Stripe Webhook] Inserted queue request for PI: ${pi.id}`);
+        } else {
+          await supabase
+            .from('requests')
+            .update({ payment_status: 'paid' })
+            .eq('id', existing.id);
         }
       }
     }

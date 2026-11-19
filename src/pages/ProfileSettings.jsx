@@ -27,7 +27,7 @@ import {
   FileText
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
-import { initiateStripeConnectOnboarding } from '../lib/stripe';
+import { initiateStripeConnectOnboarding, verifyStripeConnectAccount } from '../lib/stripe';
 import { uploadCoverImage } from '../cloudinary/upload';
 import { useAuth } from '../context/AuthContext';
 import ImageCropModal from '../components/common/ImageCropModal';
@@ -108,15 +108,34 @@ export default function ProfileSettings() {
 
     if (connectStatus === 'success') {
       if (accountId && accountId.startsWith('acct_') && !isLegacyTest(accountId)) {
-        const updated = {
-          ...formData,
-          stripe_account_id: accountId,
-          stripe_connected: true,
-        };
-        setFormData(updated);
-        updateProfile(updated).then(() => {
-          toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
-          window.history.replaceState({}, document.title, window.location.pathname);
+        verifyStripeConnectAccount(accountId).then((check) => {
+          const isReady = check?.isReadyForPayouts || check?.payoutsEnabled || check?.detailsSubmitted;
+          const updated = {
+            ...formData,
+            stripe_account_id: accountId,
+            stripe_connected: true,
+          };
+          setFormData(updated);
+          updateProfile(updated).then(() => {
+            if (isReady) {
+              const bankInfo = check?.bankName ? ` (${check.bankName} •••• ${check.last4})` : '';
+              toast.success(`🎉 Bank account linked${bankInfo}! Ready to receive direct deposits.`);
+            } else {
+              toast.success('🎉 Stripe onboarding completed! Your payouts will activate shortly.');
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+          });
+        }).catch(() => {
+          const updated = {
+            ...formData,
+            stripe_account_id: accountId,
+            stripe_connected: true,
+          };
+          setFormData(updated);
+          updateProfile(updated).then(() => {
+            toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+          });
         });
       } else {
         window.history.replaceState({}, document.title, window.location.pathname);

@@ -107,14 +107,14 @@ export default function Navbar() {
       top: 0,
       zIndex: 100
     }}>
-      <div className="container" style={{
+      <div className="container nav-inner-container" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         height: '70px',
       }}>
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', minWidth: 0, flexShrink: 1 }}>
           <div style={{
             width: '38px',
             height: '38px',
@@ -124,22 +124,24 @@ export default function Navbar() {
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            boxShadow: '0 0 16px rgba(59, 130, 246, 0.45)'
+            boxShadow: '0 0 16px rgba(59, 130, 246, 0.45)',
+            flexShrink: 0
           }}>
             <Radio size={20} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.3rem',
+              fontSize: '1.25rem',
               fontWeight: 800,
               letterSpacing: '-0.025em',
               color: '#fff',
-              lineHeight: 1.1
+              lineHeight: 1.1,
+              whiteSpace: 'nowrap'
             }}>
               Request<span style={{ color: '#3b82f6' }}>ly</span>
             </span>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600 }}>
+            <span className="nav-subtitle" style={{ fontSize: '0.65rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600, whiteSpace: 'nowrap' }}>
               LIVE STAGE TIPPING
             </span>
           </div>
@@ -178,27 +180,28 @@ export default function Navbar() {
         )}
 
         {/* Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
           {(user || isDemoMode) ? (
             <>
               {/* Live Gig Event Status Button */}
               <button
                 onClick={handleEventAction}
-                className="btn btn-sm"
+                className="btn btn-sm nav-event-status-btn"
                 style={{
                   background: activeEvent ? 'rgba(16, 185, 129, 0.16)' : 'rgba(239, 68, 68, 0.16)',
                   border: `1px solid ${activeEvent ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)'}`,
                   color: activeEvent ? '#34d399' : '#f87171',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.45rem',
-                  padding: '0.45rem 0.8rem',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.7rem',
                   borderRadius: '9999px',
                   fontWeight: 700,
-                  fontSize: '0.8rem',
+                  fontSize: '0.78rem',
                   boxShadow: activeEvent ? '0 0 12px rgba(16, 185, 129, 0.25)' : '0 2px 8px rgba(239, 68, 68, 0.2)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
                 title={activeEvent ? `Live Event: ${activeEvent.title} (Click to view live queue)` : "Click to create a live gig event so fans can send requests"}
               >
@@ -227,21 +230,21 @@ export default function Navbar() {
                 <span>Fan View</span>
               </a>
 
-              {/* Sign Out */}
+              {/* Sign Out (Desktop Only) */}
               <button
                 onClick={() => {
                   signOut();
                   navigate('/');
                   toast.success('Signed out');
                 }}
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline btn-sm desktop-logout-btn"
                 title="Sign out"
               >
                 <LogOut size={15} />
               </button>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '0.65rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <Link to="/login" className="btn btn-outline btn-sm">
                 <LogIn size={15} />
                 <span>Musician Login</span>
@@ -252,12 +255,13 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle (Always fully visible, never cut off) */}
           {(user || isDemoMode) && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="btn btn-outline btn-sm mobile-toggle"
-              style={{ display: 'flex', padding: '0.45rem' }}
+              style={{ display: 'flex', padding: '0.45rem', flexShrink: 0 }}
+              aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -350,10 +354,49 @@ export default function Navbar() {
             <ExternalLink size={18} />
             Open Public Fan Page
           </a>
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              signOut();
+              navigate('/');
+              toast.success('Signed out');
+            }}
+            className="btn btn-outline"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              color: '#f87171',
+              borderColor: 'rgba(239, 68, 68, 0.3)',
+              marginTop: '0.5rem'
+            }}
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
       )}
 
       <style>{`
+        @media (max-width: 767px) {
+          .nav-inner-container {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+          }
+          .desktop-logout-btn {
+            display: none !important;
+          }
+          .nav-subtitle {
+            font-size: 0.58rem !important;
+          }
+          .nav-event-status-btn {
+            font-size: 0.75rem !important;
+            padding: 0.38rem 0.6rem !important;
+          }
+        }
         @media (min-width: 768px) {
           .desktop-nav { display: flex !important; }
           #view-public-fan-btn { display: inline-flex !important; }
