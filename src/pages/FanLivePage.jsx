@@ -61,7 +61,7 @@ export default function FanLivePage() {
           .then(() => {
             if (isTip !== 'true') {
               supabase.from('requests').select('*').eq('id', reqId).maybeSingle().then(({ data: r }) => {
-                if (r) setActiveRequestTrack(r);
+                if (r) updateActiveRequestTrack(r);
               });
             }
           });
@@ -93,9 +93,30 @@ export default function FanLivePage() {
   const [fanName, setFanName] = useState('');
   const [fanMessage, setFanMessage] = useState('');
 
-  // Payment states
+  // Payment states & persistent fan request tracker
   const [wallets] = useState(() => getAvailableWallets());
-  const [activeRequestTrack, setActiveRequestTrack] = useState(null);
+  const storageKey = `requestly_fan_active_req_${effectiveSlug}`;
+  const [activeRequestTrack, setActiveRequestTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const updateActiveRequestTrack = (req) => {
+    setActiveRequestTrack(req);
+    try {
+      if (req) {
+        localStorage.setItem(storageKey, JSON.stringify(req));
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
 
   // Direct Tip Modal (without song)
   const [showDirectTipModal, setShowDirectTipModal] = useState(false);
@@ -210,9 +231,34 @@ export default function FanLivePage() {
     };
   }, [band?.id]);
 
+  // Persistent fan request tracking across page refreshes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id) {
+          // Re-fetch latest status from Supabase so refresh always has fresh live data
+          supabase
+            .from('requests')
+            .select('*')
+            .eq('id', parsed.id)
+            .maybeSingle()
+            .then(({ data: freshReq }) => {
+              if (freshReq) {
+                updateActiveRequestTrack(freshReq);
+              }
+            });
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }, [storageKey]);
+
   // Realtime subscription for active fan request tracking
   useEffect(() => {
-    if (!activeRequestTrack) return;
+    if (!activeRequestTrack?.id) return;
 
     const channel = supabase
       .channel(`fan_track_${activeRequestTrack.id}`)
@@ -225,7 +271,7 @@ export default function FanLivePage() {
           filter: `id=eq.${activeRequestTrack.id}`,
         },
         (payload) => {
-          setActiveRequestTrack(payload.new);
+          updateActiveRequestTrack(payload.new);
           if (payload.new.status === 'playing') {
             confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
             toast('🎸 The band is now playing your request!', { icon: '🔥', duration: 6000 });
@@ -440,44 +486,58 @@ export default function FanLivePage() {
         </button>
       </div>
 
-      {/* Active Fan Request Tracker Banner (If fan recently requested a song) */}
+      {/* Active Fan Request Tracker Banner (Persists across page refresh via localStorage) */}
       {activeRequestTrack && (
         <div className="glass-card" style={{
           marginBottom: '1.25rem',
           padding: '1.25rem',
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(18, 20, 30, 0.95))',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(18, 20, 30, 0.98))',
           borderColor: '#10b981',
-          boxShadow: '0 0 25px rgba(16, 185, 129, 0.25)'
+          borderWidth: '1.5px',
+          boxShadow: '0 0 25px rgba(16, 185, 129, 0.3)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              ✓ YOUR REQUEST IS ON STAGE
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              ✓ THE BAND HAS GOT YOUR REQUEST!
             </span>
             <button
-              onClick={() => setActiveRequestTrack(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
+              onClick={() => updateActiveRequestTrack(null)}
+              title="Dismiss tracking"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '0.2rem' }}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
 
-          <h3 style={{ fontSize: '1.35rem', color: '#fff', marginBottom: '0.25rem' }}>
+          <h3 style={{ fontSize: '1.35rem', color: '#fff', marginBottom: '0.2rem', fontWeight: 700 }}>
             {activeRequestTrack.song_title}
           </h3>
+          {activeRequestTrack.song_artist && activeRequestTrack.song_artist !== 'Custom Song' && activeRequestTrack.song_artist !== 'Thank You!' && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.45rem' }}>
+              by {activeRequestTrack.song_artist}
+            </p>
+          )}
 
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '0.5rem',
             marginTop: '0.65rem',
-            padding: '0.5rem 0.85rem',
-            background: 'rgba(0, 0, 0, 0.4)',
-            borderRadius: '8px'
+            padding: '0.55rem 0.85rem',
+            background: 'rgba(0, 0, 0, 0.45)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
           }}>
-            <span className="live-pulse" />
-            <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
-              Status: {activeRequestTrack.status === 'playing' ? '🎸 NOW PLAYING ON STAGE!' : activeRequestTrack.status === 'up_next' ? '⚡ UP NEXT ON STAGE!' : activeRequestTrack.status === 'completed' ? '✅ PLAYED! THANK YOU!' : '⏳ In Band\'s Live Queue'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="live-pulse" />
+              <span style={{ fontSize: '0.88rem', color: '#fff', fontWeight: 700 }}>
+                Status: {activeRequestTrack.status === 'playing' ? '🎸 NOW PLAYING ON STAGE!' : activeRequestTrack.status === 'up_next' ? '⚡ UP NEXT ON STAGE!' : activeRequestTrack.status === 'completed' ? '✅ PLAYED! THANK YOU!' : '⏳ In Band\'s Live Queue'}
+              </span>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.45rem' }}>
+            💡 Your request stays visible here even if you refresh this page. Status updates live as the band plays!
           </div>
         </div>
       )}
@@ -922,7 +982,7 @@ export default function FanLivePage() {
                       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
                       toast.success('🎉 Song request submitted with Apple Pay / Card!');
                       if (createdRequest) {
-                        setActiveRequestTrack(createdRequest);
+                        updateActiveRequestTrack(createdRequest);
                       }
                     }}
                     onCancel={() => {
@@ -1071,11 +1131,14 @@ export default function FanLivePage() {
                       slug={effectiveSlug}
                       isDirectTip={true}
                       eventId={activeEvent?.id || null}
-                      onSuccess={() => {
+                      onSuccess={(tipReq) => {
                         setShowDirectTipModal(false);
                         setFanMessage('');
                         confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
                         toast.success('🎉 Tip sent directly to the band! Thank you!');
+                        if (tipReq) {
+                          updateActiveRequestTrack(tipReq);
+                        }
                       }}
                       onCancel={() => {
                         setShowDirectTipModal(false);
