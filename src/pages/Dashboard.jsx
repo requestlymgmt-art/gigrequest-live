@@ -479,190 +479,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Live Event Control Bar */}
-      <div style={{
-        background: activeEvent 
-          ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%)'
-          : 'rgba(255, 255, 255, 0.03)',
-        border: activeEvent 
-          ? '1px solid rgba(6, 182, 212, 0.45)' 
-          : '1px dashed rgba(255, 255, 255, 0.18)',
-        borderRadius: '18px',
-        padding: '1.25rem 1.5rem',
-        marginBottom: '2rem',
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '1.25rem',
-        boxShadow: activeEvent ? '0 8px 30px rgba(6, 182, 212, 0.15)' : 'none'
-      }}>
-        {activeEvent ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '12px',
-                background: 'rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#34d399',
-                boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)'
-              }}>
-                <Radio size={22} className="live-pulse" />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                  <span className="badge badge-emerald" style={{ fontSize: '0.78rem', padding: '0.25rem 0.65rem' }}>
-                    <span className="live-pulse" /> LIVE EVENT ACTIVE
-                  </span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fcd34d', fontFamily: 'JetBrains Mono, monospace' }}>
-                    ⏱ {timerElapsed}
-                  </span>
-                </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                  {activeEvent.title} {activeEvent.venue ? <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.9rem' }}>• {activeEvent.venue}</span> : ''}
-                </h3>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={handleEndEvent}
-                disabled={endingEvent}
-                className="btn btn-outline"
-                style={{
-                  borderColor: 'rgba(239, 68, 68, 0.5)',
-                  color: '#f87171',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  fontWeight: 700,
-                  padding: '0.65rem 1.25rem',
-                  gap: '0.5rem',
-                }}
-              >
-                <X size={16} />
-                <span>{endingEvent ? 'Ending Event...' : 'End Event & Get Summary'}</span>
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '12px',
-                background: 'rgba(59, 130, 246, 0.15)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#60a5fa'
-              }}>
-                <Play size={20} fill="currentColor" />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
-                  Stage Is Currently Idle
-                </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
-                  Start a Live Event to begin taking paid requests & tracking gig earnings
-                </h3>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowStartEventModal(true)}
-              className="btn btn-primary"
-              style={{
-                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                fontWeight: 800,
-                fontSize: '0.95rem',
-                padding: '0.75rem 1.4rem',
-                gap: '0.5rem',
-                boxShadow: '0 4px 18px rgba(6, 182, 212, 0.35)',
-              }}
-            >
-              <Play size={16} fill="currentColor" />
-              <span>Start Live Event</span>
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* KPI Stats Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '1.25rem',
-        marginBottom: '2.5rem'
-      }}>
-        <div className="glass-card" style={{ padding: '1.25rem', borderColor: activeEvent ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Event Confirmed Earnings</span>
-            <div style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '0.35rem', borderRadius: '8px' }}>
-              <DollarSign size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#34d399' }}>
-            ${totalEarnings.toFixed(2)}
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            {activeEvent 
-              ? `$${capturedEarnings.toFixed(2)} Captured • $${heldEarnings.toFixed(2)} Held`
-              : '$0.00 — Start event to take requests'}
-          </span>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Queue</span>
-            <div style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '0.35rem', borderRadius: '8px' }}>
-              <Clock size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff' }}>
-            {queueCount}
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            Waiting to be played
-          </span>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Songs Played</span>
-            <div style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', padding: '0.35rem', borderRadius: '8px' }}>
-              <CheckCircle size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff' }}>
-            {completedCount}
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            Fulfilled during set
-          </span>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Gig Duration</span>
-            <div style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '0.35rem', borderRadius: '8px' }}>
-              <Radio size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
-            {activeEvent ? timerElapsed : '00:00:00'}
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            {activeEvent ? `${currentEventRequests.length} requests received` : 'Stage idle'}
-          </span>
-        </div>
-      </div>
-
       {/* Filter Tabs & Search */}
       <div style={{
         display: 'flex',
@@ -1082,6 +898,190 @@ export default function Dashboard() {
           })}
         </div>
       )}
+
+      {/* Live Event Control Bar */}
+      <div style={{
+        background: activeEvent 
+          ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%)'
+          : 'rgba(255, 255, 255, 0.03)',
+        border: activeEvent 
+          ? '1px solid rgba(6, 182, 212, 0.45)' 
+          : '1px dashed rgba(255, 255, 255, 0.18)',
+        borderRadius: '18px',
+        padding: '1.25rem 1.5rem',
+        marginBottom: '2rem',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '1.25rem',
+        boxShadow: activeEvent ? '0 8px 30px rgba(6, 182, 212, 0.15)' : 'none'
+      }}>
+        {activeEvent ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: 'rgba(16, 185, 129, 0.2)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#34d399',
+                boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)'
+              }}>
+                <Radio size={22} className="live-pulse" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+                  <span className="badge badge-emerald" style={{ fontSize: '0.78rem', padding: '0.25rem 0.65rem' }}>
+                    <span className="live-pulse" /> LIVE EVENT ACTIVE
+                  </span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fcd34d', fontFamily: 'JetBrains Mono, monospace' }}>
+                    ⏱ {timerElapsed}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  {activeEvent.title} {activeEvent.venue ? <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.9rem' }}>• {activeEvent.venue}</span> : ''}
+                </h3>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleEndEvent}
+                disabled={endingEvent}
+                className="btn btn-outline"
+                style={{
+                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                  color: '#f87171',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  fontWeight: 700,
+                  padding: '0.65rem 1.25rem',
+                  gap: '0.5rem',
+                }}
+              >
+                <X size={16} />
+                <span>{endingEvent ? 'Ending Event...' : 'End Event & Get Summary'}</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#60a5fa'
+              }}>
+                <Play size={20} fill="currentColor" />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
+                  Stage Is Currently Idle
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  Start a Live Event to begin taking paid requests & tracking gig earnings
+                </h3>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowStartEventModal(true)}
+              className="btn btn-primary"
+              style={{
+                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                padding: '0.75rem 1.4rem',
+                gap: '0.5rem',
+                boxShadow: '0 4px 18px rgba(6, 182, 212, 0.35)',
+              }}
+            >
+              <Play size={16} fill="currentColor" />
+              <span>Start Live Event</span>
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* KPI Stats Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '1.25rem',
+        marginBottom: '2.5rem'
+      }}>
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: activeEvent ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Event Confirmed Earnings</span>
+            <div style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '0.35rem', borderRadius: '8px' }}>
+              <DollarSign size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#34d399' }}>
+            ${totalEarnings.toFixed(2)}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+            {activeEvent 
+              ? `$${capturedEarnings.toFixed(2)} Captured • $${heldEarnings.toFixed(2)} Held`
+              : '$0.00 — Start event to take requests'}
+          </span>
+        </div>
+
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Queue</span>
+            <div style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '0.35rem', borderRadius: '8px' }}>
+              <Clock size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff' }}>
+            {queueCount}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+            Waiting to be played
+          </span>
+        </div>
+
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Songs Played</span>
+            <div style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', padding: '0.35rem', borderRadius: '8px' }}>
+              <CheckCircle size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff' }}>
+            {completedCount}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+            Fulfilled during set
+          </span>
+        </div>
+
+        <div className="glass-card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Gig Duration</span>
+            <div style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '0.35rem', borderRadius: '8px' }}>
+              <Radio size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+            {activeEvent ? timerElapsed : '00:00:00'}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+            {activeEvent ? `${currentEventRequests.length} requests received` : 'Stage idle'}
+          </span>
+        </div>
+      </div>
 
       {/* Start Live Event Modal */}
       <StartEventModal
