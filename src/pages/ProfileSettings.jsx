@@ -919,124 +919,58 @@ export default function ProfileSettings() {
                 )}
               </button>
 
-              {/* Stripe Platform Setup Guidance & Manual Account ID Entry */}
-              <div style={{
-                background: 'rgba(59, 130, 246, 0.08)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1.25rem',
-                marginTop: '1.5rem',
-                textAlign: 'left',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-                  <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
-                  <strong style={{ color: '#60a5fa', fontSize: '0.95rem' }}>
-                    Stripe Live Connect Platform Setup
-                  </strong>
-                </div>
-
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '0.65rem 0.85rem',
-                  marginBottom: '0.85rem',
-                  fontSize: '0.8rem',
-                  color: '#34d399',
-                  lineHeight: 1.45
-                }}>
-                  ✨ <strong>Zero Stripe Login Needed for Bands:</strong> The API creates an individual Express account per band and redirects directly to Stripe&rsquo;s hosted onboarding form (<code>connect.stripe.com</code>). Bands only enter their name and debit/bank routing number!
-                </div>
-
-                <p style={{
-                  fontSize: '0.825rem',
-                  color: '#cbd5e1',
-                  lineHeight: 1.55,
-                  margin: '0 0 0.85rem',
-                  overflowWrap: 'anywhere',
-                  wordBreak: 'break-word'
-                }}>
-                  <strong>Platform Owner Note:</strong> To unlock Express account creation for bands, Stripe requires you (the platform owner) to answer a 1-minute, 3-question platform questionnaire once on your Stripe dashboard.
-                </p>
-
-                {/* Platform Questionnaire Link for Platform Owner */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%' }}>
-                  <a
-                    href="https://dashboard.stripe.com/connect/accounts/overview"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-primary btn-sm"
-                    style={{
-                      fontSize: '0.82rem',
-                      padding: '0.65rem 0.85rem',
-                      textDecoration: 'none',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      width: '100%',
-                      fontWeight: 700
-                    }}
-                  >
-                    <span>Log in to Stripe & Answer 1-Min Platform Questionnaire &rarr;</span>
-                  </a>
-
-                  <div style={{
-                    fontSize: '0.75rem',
+              {/* Optional Manual Account ID Entry if needed */}
+              <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualStripe(!showManualStripe)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
                     color: '#94a3b8',
-                    lineHeight: 1.45,
-                    margin: '0.2rem 0',
-                    background: 'rgba(0, 0, 0, 0.25)',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: 'var(--radius-sm)'
-                  }}>
-                    💡 Once you submit the 3 questions on your Stripe dashboard, the API instantly unlocks, and every band tapping &ldquo;Connect Bank Account&rdquo; lands directly on the hosted Express onboarding form with <strong>zero login needed</strong>.
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowManualStripe(!showManualStripe)}
-                    className="btn btn-outline btn-sm"
-                    style={{
-                      fontSize: '0.82rem',
-                      padding: '0.55rem 0.85rem',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      width: '100%'
-                    }}
-                  >
-                    <span>{showManualStripe ? 'Hide Manual ID Field' : 'Or Enter Existing Stripe Account ID'}</span>
-                  </button>
-                </div>
-
-                {showManualStripe && (
-                  <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }}>
-                    <label className="label" style={{ fontSize: '0.78rem', marginBottom: '0.4rem' }}>
-                      Have an existing Stripe Express Account ID? Enter here:
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-                      <input
-                        type="text"
-                        placeholder="acct_1..."
-                        value={manualStripeId}
-                        onChange={(e) => setManualStripeId(e.target.value)}
-                        className="input-field"
-                        style={{ fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
-                      />
-                      <button
-                        type="button"
-                        disabled={linkingManual}
-                        onClick={handleManualLinkStripe}
-                        className="btn btn-emerald btn-sm"
-                        style={{ fontWeight: 700, padding: '0.55rem', width: '100%', justifyContent: 'center' }}
-                      >
-                        {linkingManual ? 'Linking...' : 'Link Account'}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    fontSize: '0.8rem',
+                    textDecoration: 'underline',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showManualStripe ? 'Hide Manual Account ID' : 'Have an existing Stripe Account ID? Link manually'}
+                </button>
               </div>
+
+              {showManualStripe && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '1rem',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  width: '100%',
+                  textAlign: 'left'
+                }}>
+                  <label className="label" style={{ fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                    Stripe Account ID (starts with acct_):
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder="acct_1..."
+                      value={manualStripeId}
+                      onChange={(e) => setManualStripeId(e.target.value)}
+                      className="input-field"
+                      style={{ fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      type="button"
+                      disabled={linkingManual}
+                      onClick={handleManualLinkStripe}
+                      className="btn btn-emerald btn-sm"
+                      style={{ fontWeight: 700, padding: '0.55rem', minWidth: '90px', justifyContent: 'center' }}
+                    >
+                      {linkingManual ? 'Linking...' : 'Link'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
