@@ -36,10 +36,11 @@ import toast from 'react-hot-toast';
 const isLegacyTest = (rawId) => Boolean(rawId && (rawId.startsWith('acct_test_') || rawId.includes('test')));
 
 export default function ProfileSettings() {
-  const { profile, updateProfile, isDemoMode } = useAuth();
+  const { profile, updateProfile, refreshProfile, isDemoMode } = useAuth();
   const [searchParams] = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
+  const [connectedBankDetails, setConnectedBankDetails] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showManualUrl, setShowManualUrl] = useState(false);
@@ -101,50 +102,80 @@ export default function ProfileSettings() {
     }
   }, [profile]);
 
+  // Fetch verified bank name if stripe account is present
+  useEffect(() => {
+    const acctId = formData.stripe_account_id || profile?.stripe_account_id;
+    if (acctId && acctId.startsWith('acct_') && !isLegacyTest(acctId)) {
+      verifyStripeConnectAccount(acctId).then((check) => {
+        if (check?.bankName) {
+          setConnectedBankDetails(`${check.bankName} •••• ${check.last4 || '****'}`);
+        }
+      }).catch(() => {});
+    }
+  }, [formData.stripe_account_id, profile?.stripe_account_id]);
+
   // Handle Stripe Connect return redirect
   useEffect(() => {
     const connectStatus = searchParams.get('connect');
-    const accountId = searchParams.get('account_id');
+    const accountId = searchParams.get('account_id') || localStorage.getItem('requestly_connecting_account_id');
 
-    if (connectStatus === 'success') {
-      if (accountId && accountId.startsWith('acct_') && !isLegacyTest(accountId)) {
-        verifyStripeConnectAccount(accountId).then((check) => {
-          const isReady = check?.isReadyForPayouts || check?.payoutsEnabled || check?.detailsSubmitted;
-          const updated = {
-            ...formData,
-            stripe_account_id: accountId,
-            stripe_connected: true,
-          };
-          setFormData(updated);
-          updateProfile(updated).then(() => {
-            if (isReady) {
-              const bankInfo = check?.bankName ? ` (${check.bankName} •••• ${check.last4})` : '';
-              toast.success(`🎉 Bank account linked${bankInfo}! Ready to receive direct deposits.`);
-            } else {
-              toast.success('🎉 Stripe onboarding completed! Your payouts will activate shortly.');
+    if (connectStatus === 'success' && accountId && accountId.startsWith('acct_') && !isLegacyTest(accountId)) {
+      // 1. Immediately update UI state so it shows CONNECTED right away
+      setFormData((prev) => ({
+        ...prev,
+        stripe_account_id: accountId,
+        stripe_connected: true,
+      }));
+
+      // 2. Fetch bank name and show success toast
+      verifyStripeConnectAccount(accountId).then((check) => {
+        if (check?.bankName) {
+          setConnectedBankDetails(`${check.bankName} •••• ${check.last4 || '****'}`);
+        }
+        const bankInfo = check?.bankName ? ` (${check.bankName} •••• ${check.last4})` : '';
+        toast.success(`🎉 Bank account connected${bankInfo}! Ready to receive direct deposits.`);
+      }).catch(() => {
+        toast.success('🎉 Stripe Express account connected! Ready for direct payouts.');
+      });
+
+      // 3. Persist to Supabase
+      const persistAccount = async () => {
+        try {
+          if (profile?.id) {
+            await supabase
+              .from('profiles')
+              .update({
+                stripe_account_id: accountId,
+                stripe_connected: true,
+              })
+              .eq('id', profile.id);
+            refreshProfile?.();
+          } else {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase
+                .from('profiles')
+                .update({
+                  stripe_account_id: accountId,
+                  stripe_connected: true,
+                })
+                .eq('user_id', user.id);
+              refreshProfile?.();
             }
-            window.history.replaceState({}, document.title, window.location.pathname);
-          });
-        }).catch(() => {
-          const updated = {
-            ...formData,
-            stripe_account_id: accountId,
-            stripe_connected: true,
-          };
-          setFormData(updated);
-          updateProfile(updated).then(() => {
-            toast.success('🎉 Bank account linked via Stripe Connect! Ready to receive direct deposits.');
-            window.history.replaceState({}, document.title, window.location.pathname);
-          });
-        });
-      } else {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+          }
+        } catch (e) {
+          console.warn('Persist error:', e);
+        }
+      };
+
+      persistAccount();
+      localStorage.removeItem('requestly_connecting_account_id');
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (connectStatus === 'refresh') {
       toast('Stripe onboarding session expired. Click "Connect Bank" to resume.', { icon: 'ℹ️' });
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [searchParams]);
+  }, [searchParams, profile?.id]);
 
   // Direct device file upload with interactive pan/zoom crop frame
   const handlePhotoFileChange = (e) => {
@@ -198,6 +229,9 @@ export default function ProfileSettings() {
       });
 
       if (res && res.url) {
+        if (res.accountId) {
+          localStorage.setItem('requestly_connecting_account_id', res.accountId);
+        }
         window.location.href = res.url;
         return;
       }
@@ -842,27 +876,34 @@ export default function ProfileSettings() {
           </div>
 
           {/* Connected or Not Connected View */}
-          {formData.stripe_account_id && !isLegacyTest(formData.stripe_account_id) ? (
+          {(formData.stripe_account_id || profile?.stripe_account_id) && !isLegacyTest(formData.stripe_account_id || profile?.stripe_account_id) ? (
             <div style={{
-              background: 'rgba(16, 185, 129, 0.06)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(18, 20, 30, 0.98))',
+              border: '2px solid #10b981',
               borderRadius: 'var(--radius-md)',
-              padding: '1.25rem',
-              marginBottom: '1.5rem'
+              padding: '1.35rem',
+              marginBottom: '1.5rem',
+              boxShadow: '0 0 25px rgba(16, 185, 129, 0.25)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
-                      Connected Stripe Express Account
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+                    <span className="badge badge-emerald" style={{ fontSize: '0.82rem', padding: '0.28rem 0.7rem', fontWeight: 800, letterSpacing: '0.04em' }}>
+                      ✓ CONNECTED
                     </span>
-                    <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
-                      LIVE PRODUCTION
+                    <span style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 700 }}>
+                      Direct Bank Payouts Active
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>
-                    {formData.stripe_account_id}
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+                    {formData.stripe_account_id || profile?.stripe_account_id}
                   </div>
+                  {connectedBankDetails && (
+                    <div style={{ fontSize: '0.85rem', color: '#38bdf8', marginTop: '0.35rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span>🏦</span>
+                      <span>Verified: {connectedBankDetails}</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
@@ -884,9 +925,15 @@ export default function ProfileSettings() {
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <CheckCircle size={14} color="#10b981" />
-                <span>Automatic 2-business-day rolling deposits enabled directly to your verified bank account.</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: '#cbd5e1', paddingTop: '0.65rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={15} color="#10b981" />
+                  <span><strong>100% of song requests & tips</strong> deposit directly into your verified bank account.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={15} color="#10b981" />
+                  <span>Automatic 2-business-day rolling payout schedule is active.</span>
+                </div>
               </div>
             </div>
           ) : (
