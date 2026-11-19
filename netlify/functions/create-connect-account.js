@@ -41,7 +41,8 @@ export const handler = async (event) => {
       ) {
         try {
           const existingAccount = await stripe.accounts.retrieve(targetAccountId);
-          if (existingAccount && existingAccount.id) {
+          // Only reuse if it is already a genuine Express connected account
+          if (existingAccount && existingAccount.controller?.stripe_dashboard?.type === 'express') {
             isExisting = true;
           }
         } catch (e) {
@@ -49,7 +50,7 @@ export const handler = async (event) => {
         }
       }
 
-      // Create a fresh connected account per band through the API
+      // Create a fresh Express connected account per band through the API
       if (!isExisting) {
         let account = null;
         const commonPayload = {
@@ -62,39 +63,37 @@ export const handler = async (event) => {
             product_description: 'Live musical performances and fan song requests',
             url: bandId ? `https://requestly.live/live/${bandId}` : 'https://requestly.live',
           },
+          controller: {
+            stripe_dashboard: { type: 'express' },
+            fees: { payer: 'application' },
+            losses: { payments: 'stripe' },
+          },
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
           metadata: {
             bandId: bandId || '',
           },
         };
 
         try {
-          account = await stripe.accounts.create({
-            ...commonPayload,
-            type: 'express',
-            capabilities: {
-              card_payments: { requested: true },
-              transfers: { requested: true },
-            },
-            settings: {
-              payouts: {
-                schedule: {
-                  interval: 'daily',
-                  delay_days: 2, // Standard 2-business-day rolling bank payouts
-                },
-              },
-            },
+          // Stripe Managed Risk with Express Dashboard requires preview API version
+          account = await stripe.accounts.create(commonPayload, {
+            apiVersion: '2026-10-28.preview',
           });
         } catch (expressErr) {
-          console.warn('Express account creation failed, attempting Standard account creation with prefilled individual profile:', expressErr.message);
-          account = await stripe.accounts.create({
-            ...commonPayload,
-            type: 'standard',
+          console.warn('Express account creation with preview version failed, attempting with direct header:', expressErr.message);
+          account = await stripe.accounts.create(commonPayload, {
+            headers: {
+              'Stripe-Version': '2026-10-28.preview',
+            },
           });
         }
         targetAccountId = account.id;
       }
 
-      // Generate hosted Stripe Account Link (NO Stripe login needed, only currently due fields)
+      // Generate hosted Stripe Account Link (connect.stripe.com/setup/e/...)
       const accountLink = await stripe.accountLinks.create({
         account: targetAccountId,
         refresh_url: `${origin}/settings?connect=refresh`,
@@ -111,7 +110,7 @@ export const handler = async (event) => {
         body: JSON.stringify({
           success: true,
           accountId: targetAccountId,
-          url: accountLink.url, // connect.stripe.com/setup/s/... (NO login needed)
+          url: accountLink.url, // connect.stripe.com/setup/e/... (Express onboarding, NO merchant questions)
           mode: 'live_stripe',
         }),
       };

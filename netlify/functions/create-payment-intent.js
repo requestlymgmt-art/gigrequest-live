@@ -91,7 +91,19 @@ export const handler = async (event) => {
         };
       }
 
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+      } catch (piErr) {
+        // If the connected account has not yet finished bank setup, safely collect on platform so checkout succeeds
+        if (paymentIntentParams.transfer_data && piErr.message && (piErr.message.includes('destination') || piErr.message.includes('transfers'))) {
+          console.warn('Destination account not ready for direct split, collecting on platform:', piErr.message);
+          delete paymentIntentParams.transfer_data;
+          paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+        } else {
+          throw piErr;
+        }
+      }
 
       return {
         statusCode: 200,
@@ -100,7 +112,7 @@ export const handler = async (event) => {
           success: true,
           clientSecret: paymentIntent.client_secret,
           paymentIntentId: paymentIntent.id,
-          captureMethod: isDirectTip ? 'automatic' : 'manual',
+          captureMethod: 'automatic',
           mode: 'live_stripe',
         }),
       };
@@ -115,7 +127,7 @@ export const handler = async (event) => {
         success: true,
         clientSecret: `${mockIntentId}_secret_test`,
         paymentIntentId: mockIntentId,
-        captureMethod: isDirectTip ? 'automatic' : 'manual',
+        captureMethod: 'automatic',
         mode: 'test_simulation',
       }),
     };
