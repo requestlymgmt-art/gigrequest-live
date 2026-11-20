@@ -48,14 +48,14 @@ export const handler = async (event) => {
       idempotencyKey,
     } = body;
 
-    // Validate Required Fan Name for song requests
-    if (!isDirectTip && (!fanName || !fanName.trim() || fanName.trim().toLowerCase() === 'anonymous fan')) {
+    // Validate Required Fan Name for song requests (minimum 2 characters, e.g. "JR")
+    if (!isDirectTip && (!fanName || fanName.trim().length < 2 || fanName.trim().toLowerCase() === 'anonymous fan')) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Your name or table is required so the band knows who to play for.',
+          error: 'Your name or table must be at least 2 characters so the band knows who to play for (e.g. JR, Table 4).',
         }),
       };
     }

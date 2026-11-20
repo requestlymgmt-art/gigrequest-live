@@ -1011,15 +1011,15 @@ export default function FanLivePage() {
                   />
                 </div>
 
-                {/* Fan Name - REQUIRED */}
+                {/* Fan Name - REQUIRED (MIN 2 CHARS) */}
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                     <label className="label" style={{ marginBottom: 0 }}>
-                      Your Name or Table <span style={{ color: nameError && !fanName.trim() ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && !fanName.trim() ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
+                      Your Name or Table <span style={{ color: nameError && fanName.trim().length < 2 ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && fanName.trim().length < 2 ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                     </label>
-                    {nameError && !fanName.trim() && (
+                    {nameError && fanName.trim().length < 2 && (
                       <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                        Please enter your name or table
+                        {fanName.trim().length === 0 ? 'Please enter your name or table' : 'Minimum 2 characters (e.g. JR)'}
                       </span>
                     )}
                   </div>
@@ -1029,16 +1029,17 @@ export default function FanLivePage() {
                     value={fanName}
                     onChange={(e) => {
                       setFanName(e.target.value);
-                      if (nameError) setNameError(false);
+                      if (nameError && e.target.value.trim().length >= 2) setNameError(false);
                       try {
                         localStorage.setItem('requestly_fan_name', e.target.value);
                       } catch (err) {}
                     }}
                     className="input-field"
                     style={{
-                      borderColor: nameError && !fanName.trim() ? '#ef4444' : undefined,
-                      background: nameError && !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                      borderColor: nameError && fanName.trim().length < 2 ? '#ef4444' : undefined,
+                      background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.05)' : undefined,
                     }}
+                    minLength={2}
                     required
                   />
                 </div>
@@ -1225,11 +1226,11 @@ export default function FanLivePage() {
                   <div style={{ marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                       <label className="label" style={{ marginBottom: 0 }}>
-                        Your Name <span style={{ color: nameError && !fanName.trim() ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && !fanName.trim() ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
+                        Your Name <span style={{ color: nameError && fanName.trim().length < 2 ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && fanName.trim().length < 2 ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                       </label>
-                      {nameError && !fanName.trim() && (
+                      {nameError && fanName.trim().length < 2 && (
                         <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                          Please enter your name
+                          {fanName.trim().length === 0 ? 'Please enter your name' : 'Minimum 2 characters (e.g. JR)'}
                         </span>
                       )}
                     </div>
@@ -1239,16 +1240,17 @@ export default function FanLivePage() {
                       value={fanName}
                       onChange={(e) => {
                         setFanName(e.target.value);
-                        if (nameError) setNameError(false);
+                        if (nameError && e.target.value.trim().length >= 2) setNameError(false);
                         try {
                           localStorage.setItem('requestly_fan_name', e.target.value);
                         } catch (err) {}
                       }}
                       className="input-field"
                       style={{
-                        borderColor: nameError && !fanName.trim() ? '#ef4444' : undefined,
-                        background: nameError && !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                        borderColor: nameError && fanName.trim().length < 2 ? '#ef4444' : undefined,
+                        background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.05)' : undefined,
                       }}
+                      minLength={2}
                       required
                     />
                   </div>

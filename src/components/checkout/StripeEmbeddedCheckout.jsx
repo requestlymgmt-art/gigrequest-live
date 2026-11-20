@@ -193,10 +193,10 @@ export default function StripeEmbeddedCheckout({
           if (isSubmittingRef.current) return;
           const p = propsRef.current;
 
-          // Fan Name Validation: Strictly Required for song requests
-          if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
-            setErrorMessage('Please enter your name or table number above before authorizing.');
-            toast.error('Your name or table number is required');
+          // Fan Name Validation: Strictly Required with 2-character minimum (e.g. "JR")
+          if (!p.isDirectTip && (!p.fanName || p.fanName.trim().length < 2 || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
+            setErrorMessage('Please enter at least 2 characters for your name or table (e.g. JR, Table 4).');
+            toast.error('Name must be at least 2 characters (e.g. JR)');
             if (p.onNameValidationError) p.onNameValidationError();
             return;
           }
@@ -442,10 +442,10 @@ export default function StripeEmbeddedCheckout({
 
     const p = propsRef.current;
 
-    // Fan Name Validation: Strictly Required for song requests
-    if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
-      setErrorMessage('Please enter your name or table number above before sending your request.');
-      toast.error('Your name or table number is required');
+    // Fan Name Validation: Strictly Required with 2-character minimum (e.g. "JR")
+    if (!p.isDirectTip && (!p.fanName || p.fanName.trim().length < 2 || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
+      setErrorMessage('Please enter at least 2 characters for your name or table (e.g. JR, Table 4).');
+      toast.error('Name must be at least 2 characters (e.g. JR)');
       if (p.onNameValidationError) p.onNameValidationError();
       const nameInput = document.querySelector('input[placeholder*="Jessica"]');
       if (nameInput) {
