@@ -188,16 +188,46 @@ export default function StripeEmbeddedCheckout({
           if (isMounted) setLoading(false);
         });
 
-        // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
-        expEl.on('confirm', async () => {
+        // 1. Intercept Express Checkout Click BEFORE Apple Pay / Google Pay Sheet Opens
+        expEl.on('click', (event) => {
+          const p = propsRef.current;
+          const isNameInvalid = !p.isDirectTip && (!p.fanName || p.fanName.trim().length < 2 || p.fanName.trim().toLowerCase() === 'anonymous fan');
+
+          if (isNameInvalid) {
+            // STOP Apple Pay sheet from opening completely!
+            if (event && typeof event.reject === 'function') {
+              event.reject();
+            }
+            setErrorMessage('Please enter at least 2 characters for your name or table (e.g. JR, Table 4).');
+            if (p.onNameValidationError) p.onNameValidationError();
+            const nameInput = document.querySelector('input[placeholder*="Jessica"]');
+            if (nameInput) {
+              nameInput.focus();
+              nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+          }
+
+          // Name is valid -> proceed to open wallet sheet
+          if (event && typeof event.resolve === 'function') {
+            event.resolve();
+          }
+        });
+
+        // 2. Confirm via Express Checkout (native Apple Pay double-click & Face ID)
+        expEl.on('confirm', async (event) => {
           if (isSubmittingRef.current) return;
           const p = propsRef.current;
 
           // Fan Name Validation: Strictly Required with 2-character minimum (e.g. "JR")
           if (!p.isDirectTip && (!p.fanName || p.fanName.trim().length < 2 || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
             setErrorMessage('Please enter at least 2 characters for your name or table (e.g. JR, Table 4).');
-            toast.error('Name must be at least 2 characters (e.g. JR)');
             if (p.onNameValidationError) p.onNameValidationError();
+            const nameInput = document.querySelector('input[placeholder*="Jessica"]');
+            if (nameInput) {
+              nameInput.focus();
+              nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
           }
 

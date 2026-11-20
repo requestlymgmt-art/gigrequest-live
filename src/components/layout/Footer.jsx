@@ -40,11 +40,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <Link to="/" style={{ color: 'inherit' }}>Home</Link>
           <Link to="/live/groove-collective" style={{ color: 'inherit' }}>Live Demo</Link>
           <Link to="/register" style={{ color: 'inherit' }}>Musicians Sign Up</Link>
           <Link to="/login" style={{ color: 'inherit' }}>Sign In</Link>
+          <Link to="/admin" style={{ color: '#60a5fa', fontWeight: 600 }}>✦ Admin Portal</Link>
         </div>
 
         <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textAlign: 'right' }}>

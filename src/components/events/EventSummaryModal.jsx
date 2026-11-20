@@ -37,9 +37,21 @@ export default function EventSummaryModal({
     ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
     : `${minutes}:${String(seconds).padStart(2, '0')}`;
 
-  // Filter confirmed requests only (Stripe authorized or paid)
+  // Filter confirmed requests only (Stripe authorized or paid, strictly excluding declined or refunded)
   const confirmedRequests = requests.filter(
-    (r) => r.payment_status === 'authorized' || r.payment_status === 'paid'
+    (r) => r.status !== 'declined' && 
+           r.payment_status !== 'refunded' && 
+           r.payment_status !== 'cancelled' && 
+           (r.payment_status === 'authorized' || r.payment_status === 'paid')
+  );
+
+  // Refunded or Declined Requests
+  const refundedRequests = requests.filter(
+    (r) => r.status === 'declined' || r.payment_status === 'refunded' || r.payment_status === 'cancelled'
+  );
+  const refundedTotal = refundedRequests.reduce(
+    (sum, r) => sum + (Number(r.song_price) || 0) + (Number(r.tip_amount) || 0),
+    0
   );
 
   // Earnings Breakdown: Captured vs Held
@@ -325,6 +337,26 @@ export default function EventSummaryModal({
               ${heldEarnings.toFixed(2)}
             </div>
           </div>
+
+          {refundedTotal > 0 && (
+            <div style={{
+              width: '100%',
+              paddingTop: '0.5rem',
+              marginTop: '0.4rem',
+              borderTop: '1px dashed rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.78rem'
+            }}>
+              <span style={{ color: '#fca5a5' }}>
+                ✕ Refunded to Fans ({refundedRequests.length} declined):
+              </span>
+              <span style={{ fontWeight: 800, color: '#ef4444' }}>
+                -${refundedTotal.toFixed(2)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Tips Summary */}

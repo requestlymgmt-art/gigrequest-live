@@ -661,6 +661,65 @@ export default function FanLivePage() {
         )}
       </div>
 
+      {/* Quick Custom Song Request Banner at the Top */}
+      {band.allow_custom_song_requests && isAcceptingRequests && (
+        <div
+          onClick={handleOpenCustomModal}
+          className="glass-card"
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.85rem 1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            cursor: 'pointer',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(16, 185, 129, 0.12))',
+            border: '1px solid rgba(59, 130, 246, 0.45)',
+            borderRadius: '16px',
+            boxShadow: '0 4px 20px rgba(59, 130, 246, 0.12)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              flexShrink: 0
+            }}>
+              <Sparkles size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#fff' }}>
+                Can't find your song?
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Request any custom song for ${(Number(band.custom_request_price) || 15).toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.78rem',
+              whiteSpace: 'nowrap',
+              fontWeight: 700,
+              flexShrink: 0
+            }}
+          >
+            Custom Song ✦
+          </button>
+        </div>
+      )}
+
       {/* Song Catalog List with Alphabet Fast Scroll */}
       <div
         id="song-list-container"
@@ -1018,7 +1077,8 @@ export default function FanLivePage() {
                       Your Name or Table <span style={{ color: nameError && fanName.trim().length < 2 ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && fanName.trim().length < 2 ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                     </label>
                     {nameError && fanName.trim().length < 2 && (
-                      <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <AlertCircle size={13} />
                         {fanName.trim().length === 0 ? 'Please enter your name or table' : 'Minimum 2 characters (e.g. JR)'}
                       </span>
                     )}
@@ -1037,7 +1097,8 @@ export default function FanLivePage() {
                     className="input-field"
                     style={{
                       borderColor: nameError && fanName.trim().length < 2 ? '#ef4444' : undefined,
-                      background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                      boxShadow: nameError && fanName.trim().length < 2 ? '0 0 12px rgba(239, 68, 68, 0.4)' : undefined,
+                      background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.08)' : undefined,
                     }}
                     minLength={2}
                     required
@@ -1229,7 +1290,8 @@ export default function FanLivePage() {
                         Your Name <span style={{ color: nameError && fanName.trim().length < 2 ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && fanName.trim().length < 2 ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                       </label>
                       {nameError && fanName.trim().length < 2 && (
-                        <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <AlertCircle size={13} />
                           {fanName.trim().length === 0 ? 'Please enter your name' : 'Minimum 2 characters (e.g. JR)'}
                         </span>
                       )}
@@ -1248,7 +1310,8 @@ export default function FanLivePage() {
                       className="input-field"
                       style={{
                         borderColor: nameError && fanName.trim().length < 2 ? '#ef4444' : undefined,
-                        background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                        boxShadow: nameError && fanName.trim().length < 2 ? '0 0 12px rgba(239, 68, 68, 0.4)' : undefined,
+                        background: nameError && fanName.trim().length < 2 ? 'rgba(239, 68, 68, 0.08)' : undefined,
                       }}
                       minLength={2}
                       required

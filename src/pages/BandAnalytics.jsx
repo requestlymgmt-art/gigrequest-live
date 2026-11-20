@@ -83,7 +83,7 @@ export default function BandAnalytics() {
 
   // Filter requests based on selected month (excluding declined/refunded from earnings)
   const paidRequests = useMemo(() => {
-    return requests.filter((r) => r.status !== 'declined' && r.payment_status !== 'refunded');
+    return requests.filter((r) => r.status !== 'declined' && r.payment_status !== 'refunded' && r.payment_status !== 'cancelled');
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
