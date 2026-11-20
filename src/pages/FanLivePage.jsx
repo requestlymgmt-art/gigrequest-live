@@ -136,6 +136,7 @@ export default function FanLivePage() {
   const [fanMessage, setFanMessage] = useState('');
   const [requestIdempotencyKey, setRequestIdempotencyKey] = useState('');
   const [repeatWarningSong, setRepeatWarningSong] = useState(null);
+  const [nameError, setNameError] = useState(false);
 
   // Payment states & persistent fan request tracker
   const [wallets] = useState(() => getAvailableWallets());
@@ -336,6 +337,7 @@ export default function FanLivePage() {
     setIsCustomRequest(false);
     setTipBoost(0);
     setCustomTipInput('');
+    setNameError(false);
     try {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
@@ -352,6 +354,7 @@ export default function FanLivePage() {
     setCustomSongArtist('');
     setTipBoost(0);
     setCustomTipInput('');
+    setNameError(false);
     try {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
@@ -365,6 +368,7 @@ export default function FanLivePage() {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
     } catch (e) {}
+    setNameError(false);
     setRequestIdempotencyKey(`${band?.id || 'band'}_tip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
     setShowDirectTipModal(true);
   };
@@ -1007,15 +1011,15 @@ export default function FanLivePage() {
                   />
                 </div>
 
-                {/* Fan Name - STRICTLY REQUIRED */}
+                {/* Fan Name - REQUIRED */}
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                    <label className="label" style={{ marginBottom: 0, fontWeight: 700 }}>
-                      Your Name or Table <span style={{ color: '#ef4444' }}>* (Required)</span>
+                    <label className="label" style={{ marginBottom: 0 }}>
+                      Your Name or Table <span style={{ color: nameError && !fanName.trim() ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && !fanName.trim() ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                     </label>
-                    {!fanName.trim() && (
+                    {nameError && !fanName.trim() && (
                       <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                        Required for stage queue
+                        Please enter your name or table
                       </span>
                     )}
                   </div>
@@ -1025,14 +1029,15 @@ export default function FanLivePage() {
                     value={fanName}
                     onChange={(e) => {
                       setFanName(e.target.value);
+                      if (nameError) setNameError(false);
                       try {
                         localStorage.setItem('requestly_fan_name', e.target.value);
                       } catch (err) {}
                     }}
                     className="input-field"
                     style={{
-                      borderColor: !fanName.trim() ? '#ef4444' : undefined,
-                      background: !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                      borderColor: nameError && !fanName.trim() ? '#ef4444' : undefined,
+                      background: nameError && !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
                     }}
                     required
                   />
@@ -1134,6 +1139,7 @@ export default function FanLivePage() {
                     isDirectTip={false}
                     eventId={activeEvent?.id || null}
                     idempotencyKey={requestIdempotencyKey}
+                    onNameValidationError={() => setNameError(true)}
                     onSuccess={(createdRequest) => {
                       const completedTitle = isCustomRequest ? customSongTitle.trim() : (selectedSong?.title || '');
                       if (completedTitle) recordSongRequestSuccess(completedTitle);
@@ -1218,12 +1224,12 @@ export default function FanLivePage() {
 
                   <div style={{ marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <label className="label" style={{ marginBottom: 0, fontWeight: 700 }}>
-                        Your Name <span style={{ color: '#ef4444' }}>* (Required)</span>
+                      <label className="label" style={{ marginBottom: 0 }}>
+                        Your Name <span style={{ color: nameError && !fanName.trim() ? '#ef4444' : 'var(--text-muted)', fontWeight: nameError && !fanName.trim() ? 700 : 400, transition: 'color 0.15s ease' }}>(Required)</span>
                       </label>
-                      {!fanName.trim() && (
+                      {nameError && !fanName.trim() && (
                         <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                          Required for shoutout
+                          Please enter your name
                         </span>
                       )}
                     </div>
@@ -1233,14 +1239,15 @@ export default function FanLivePage() {
                       value={fanName}
                       onChange={(e) => {
                         setFanName(e.target.value);
+                        if (nameError) setNameError(false);
                         try {
                           localStorage.setItem('requestly_fan_name', e.target.value);
                         } catch (err) {}
                       }}
                       className="input-field"
                       style={{
-                        borderColor: !fanName.trim() ? '#ef4444' : undefined,
-                        background: !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                        borderColor: nameError && !fanName.trim() ? '#ef4444' : undefined,
+                        background: nameError && !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
                       }}
                       required
                     />
@@ -1314,6 +1321,7 @@ export default function FanLivePage() {
                       isDirectTip={true}
                       eventId={activeEvent?.id || null}
                       idempotencyKey={requestIdempotencyKey}
+                      onNameValidationError={() => setNameError(true)}
                       onSuccess={(tipReq) => {
                         setShowDirectTipModal(false);
                         setFanMessage('');

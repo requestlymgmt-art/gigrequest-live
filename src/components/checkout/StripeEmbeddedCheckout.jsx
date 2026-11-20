@@ -48,6 +48,7 @@ export default function StripeEmbeddedCheckout({
   isDirectTip = false,
   eventId = null,
   idempotencyKey = '',
+  onNameValidationError,
   onSuccess,
   onCancel,
 }) {
@@ -91,6 +92,7 @@ export default function StripeEmbeddedCheckout({
     isDirectTip,
     eventId,
     idempotencyKey,
+    onNameValidationError,
   });
 
   useEffect(() => {
@@ -112,6 +114,7 @@ export default function StripeEmbeddedCheckout({
       isDirectTip,
       eventId,
       idempotencyKey,
+      onNameValidationError,
     };
   });
 
@@ -194,6 +197,7 @@ export default function StripeEmbeddedCheckout({
           if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
             setErrorMessage('Please enter your name or table number above before authorizing.');
             toast.error('Your name or table number is required');
+            if (p.onNameValidationError) p.onNameValidationError();
             return;
           }
 
@@ -442,6 +446,7 @@ export default function StripeEmbeddedCheckout({
     if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
       setErrorMessage('Please enter your name or table number above before sending your request.');
       toast.error('Your name or table number is required');
+      if (p.onNameValidationError) p.onNameValidationError();
       const nameInput = document.querySelector('input[placeholder*="Jessica"]');
       if (nameInput) {
         nameInput.focus();
