@@ -77,12 +77,12 @@ export const handler = async (event) => {
           .maybeSingle();
 
         if (!existing) {
-          await supabase.from('requests').insert({
+          const { error: insertErr } = await supabase.from('requests').insert({
             band_id: meta.bandId,
             event_id: meta.eventId || null,
             song_title: meta.songTitle,
             song_artist: meta.songArtist || '',
-            fan_name: meta.fanName || 'Anonymous Fan',
+            fan_name: meta.fanName || 'Fan',
             fan_message: meta.fanMessage || '',
             song_price: Number(meta.songPrice || 0),
             tip_amount: Number(meta.tipAmount || 0),
@@ -93,6 +93,9 @@ export const handler = async (event) => {
             payment_method: pi.payment_method_types?.[0] || 'apple_pay',
             stripe_payment_id: pi.id,
           });
+          if (insertErr && (insertErr.code === '23505' || insertErr.message?.includes('duplicate key'))) {
+            console.log(`[Stripe Webhook] Duplicate prevented: request already exists for PI: ${pi.id}`);
+          }
         }
       }
     }
@@ -122,12 +125,12 @@ export const handler = async (event) => {
 
         if (!existing) {
           const isTip = meta.isDirectTip === 'true';
-          await supabase.from('requests').insert({
+          const { error: insertErr } = await supabase.from('requests').insert({
             band_id: meta.bandId,
             event_id: meta.eventId || null,
             song_title: isTip ? '💖 Direct Tip to the Band' : (meta.songTitle || 'Song Request'),
             song_artist: isTip ? 'Thank You!' : (meta.songArtist || ''),
-            fan_name: meta.fanName || 'Anonymous Fan',
+            fan_name: meta.fanName || 'Fan',
             fan_message: meta.fanMessage || '',
             song_price: Number(meta.songPrice || 0),
             tip_amount: Number(meta.tipAmount || (isTip ? Number(pi.amount) / 100 : 0)),
@@ -138,7 +141,20 @@ export const handler = async (event) => {
             payment_method: pi.payment_method_types?.[0] || 'apple_pay',
             stripe_payment_id: pi.id,
           });
-          console.log(`[Stripe Webhook] Inserted queue request for PI: ${pi.id}`);
+
+          if (insertErr) {
+            if (insertErr.code === '23505' || insertErr.message?.includes('duplicate key')) {
+              console.log(`[Stripe Webhook] Duplicate prevented: request already exists for PI: ${pi.id}`);
+              await supabase
+                .from('requests')
+                .update({ payment_status: 'paid' })
+                .eq('stripe_payment_id', pi.id);
+            } else {
+              console.error('[Stripe Webhook] Supabase insert error:', insertErr);
+            }
+          } else {
+            console.log(`[Stripe Webhook] Inserted queue request for PI: ${pi.id}`);
+          }
         } else {
           await supabase
             .from('requests')

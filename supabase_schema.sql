@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS public.requests (
   played_at TIMESTAMPTZ
 );
 
+-- Unique constraint ensuring one real Stripe payment never produces duplicate song requests
+CREATE UNIQUE INDEX IF NOT EXISTS idx_requests_stripe_payment_id_unique 
+  ON public.requests (stripe_payment_id) 
+  WHERE stripe_payment_id IS NOT NULL AND stripe_payment_id != '';
+
 CREATE TABLE IF NOT EXISTS public.events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   band_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

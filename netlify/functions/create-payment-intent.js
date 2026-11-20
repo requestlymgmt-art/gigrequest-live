@@ -45,7 +45,20 @@ export const handler = async (event) => {
       eventId,
       isDirectTip = false, // Direct tip = auto capture, Song request = manual capture (only charged when accepted!)
       currency = 'usd',
+      idempotencyKey,
     } = body;
+
+    // Validate Required Fan Name for song requests
+    if (!isDirectTip && (!fanName || !fanName.trim() || fanName.trim().toLowerCase() === 'anonymous fan')) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Your name or table is required so the band knows who to play for.',
+        }),
+      };
+    }
 
     const amountInCents = Math.round(Number(amount) * 100);
     const feeInCents = Math.round(Number(requestlyFee || 0) * 100);
@@ -64,12 +77,12 @@ export const handler = async (event) => {
           enabled: true, // Enables Apple Pay, Google Pay, and Credit Cards automatically
         },
         description: isDirectTip
-          ? `Direct Musician Tip from ${fanName || 'Fan'}`
-          : `Song Request: "${songTitle}" by ${fanName || 'Fan'}`,
+          ? `Direct Musician Tip from ${fanName?.trim() || 'Generous Fan'}`
+          : `Song Request: "${songTitle}" by ${fanName?.trim() || 'Fan'}`,
         metadata: {
           songTitle: songTitle || '',
           songArtist: body.songArtist || '',
-          fanName: fanName || 'Anonymous Fan',
+          fanName: fanName?.trim() || 'Generous Fan',
           fanMessage: body.fanMessage || '',
           songPrice: (body.songPrice || 0).toString(),
           tipAmount: (body.tipAmount || 0).toString(),
@@ -78,6 +91,7 @@ export const handler = async (event) => {
           eventId: eventId || '',
           isDirectTip: isDirectTip ? 'true' : 'false',
           requestlyFee: (requestlyFee || 0).toString(),
+          idempotencyKey: idempotencyKey || '',
         },
       };
 
@@ -92,14 +106,17 @@ export const handler = async (event) => {
       }
 
       let paymentIntent;
+      const stripeOptions = idempotencyKey ? { idempotencyKey: `pi_${idempotencyKey}` } : undefined;
+
       try {
-        paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+        paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, stripeOptions);
       } catch (piErr) {
         // If the connected account has not yet finished bank setup, safely collect on platform so checkout succeeds
         if (paymentIntentParams.transfer_data && piErr.message && (piErr.message.includes('destination') || piErr.message.includes('transfers'))) {
           console.warn('Destination account not ready for direct split, collecting on platform:', piErr.message);
           delete paymentIntentParams.transfer_data;
-          paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+          const fallbackOptions = idempotencyKey ? { idempotencyKey: `pi_fallback_${idempotencyKey}` } : undefined;
+          paymentIntent = await stripe.paymentIntents.create(paymentIntentParams, fallbackOptions);
         } else {
           throw piErr;
         }

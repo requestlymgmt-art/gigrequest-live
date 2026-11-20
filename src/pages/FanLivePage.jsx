@@ -83,6 +83,42 @@ export default function FanLivePage() {
     }
   }, [searchParams]);
 
+  // Recent song requests tracking (to prevent accidental duplicate requests within minutes)
+  const RECENT_REQUESTS_KEY = `requestly_recent_fan_songs_${effectiveSlug}`;
+
+  const getRecentSongRequest = (title) => {
+    if (!title) return null;
+    try {
+      const raw = localStorage.getItem(RECENT_REQUESTS_KEY);
+      if (!raw) return null;
+      const list = JSON.parse(raw);
+      const now = Date.now();
+      const normalized = title.trim().toLowerCase();
+      // Look for match within last 3 minutes (180,000 ms)
+      return list.find(
+        (item) => item.title?.toLowerCase() === normalized && (now - item.timestamp) < 3 * 60 * 1000
+      ) || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const recordSongRequestSuccess = (title) => {
+    if (!title) return;
+    try {
+      const raw = localStorage.getItem(RECENT_REQUESTS_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      const now = Date.now();
+      const updated = [
+        { title: title.trim(), timestamp: now },
+        ...list.filter((item) => (now - item.timestamp) < 15 * 60 * 1000),
+      ];
+      localStorage.setItem(RECENT_REQUESTS_KEY, JSON.stringify(updated.slice(0, 20)));
+    } catch (e) {
+      // Ignore
+    }
+  };
+
   // Request modal states
   const [selectedSong, setSelectedSong] = useState(null);
   const [isCustomRequest, setIsCustomRequest] = useState(false);
@@ -90,8 +126,16 @@ export default function FanLivePage() {
   const [customSongArtist, setCustomSongArtist] = useState('');
   const [tipBoost, setTipBoost] = useState(0);
   const [customTipInput, setCustomTipInput] = useState('');
-  const [fanName, setFanName] = useState('');
+  const [fanName, setFanName] = useState(() => {
+    try {
+      return localStorage.getItem('requestly_fan_name') || '';
+    } catch (e) {
+      return '';
+    }
+  });
   const [fanMessage, setFanMessage] = useState('');
+  const [requestIdempotencyKey, setRequestIdempotencyKey] = useState('');
+  const [repeatWarningSong, setRepeatWarningSong] = useState(null);
 
   // Payment states & persistent fan request tracker
   const [wallets] = useState(() => getAvailableWallets());
@@ -292,8 +336,13 @@ export default function FanLivePage() {
     setIsCustomRequest(false);
     setTipBoost(0);
     setCustomTipInput('');
-    setFanName('');
+    try {
+      const saved = localStorage.getItem('requestly_fan_name');
+      if (saved) setFanName(saved);
+    } catch (e) {}
     setFanMessage('');
+    // New idempotency key for this fresh modal session
+    setRequestIdempotencyKey(`${band?.id || 'band'}_song_${song?.id || 'song'}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
   };
 
   const handleOpenCustomModal = () => {
@@ -303,8 +352,21 @@ export default function FanLivePage() {
     setCustomSongArtist('');
     setTipBoost(0);
     setCustomTipInput('');
-    setFanName('');
+    try {
+      const saved = localStorage.getItem('requestly_fan_name');
+      if (saved) setFanName(saved);
+    } catch (e) {}
     setFanMessage('');
+    setRequestIdempotencyKey(`${band?.id || 'band'}_custom_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+  };
+
+  const handleOpenDirectTipModal = () => {
+    try {
+      const saved = localStorage.getItem('requestly_fan_name');
+      if (saved) setFanName(saved);
+    } catch (e) {}
+    setRequestIdempotencyKey(`${band?.id || 'band'}_tip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+    setShowDirectTipModal(true);
   };
 
   // Fee calculation
@@ -322,6 +384,17 @@ export default function FanLivePage() {
   const handleSongClick = (song) => {
     if (!isLiveEvent) {
       toast('Live song requests are paused while the band is off-stage. Requests will open when the live set begins!', { icon: 'ℹ️' });
+      return;
+    }
+    // Check if the same fan requested this exact song within the last 3 minutes
+    const recent = getRecentSongRequest(song.title);
+    if (recent) {
+      const minutesAgo = Math.max(1, Math.round((Date.now() - recent.timestamp) / 60000));
+      setRepeatWarningSong({
+        song,
+        title: song.title,
+        minutesAgo,
+      });
       return;
     }
     handleOpenSongModal(song);
@@ -477,7 +550,7 @@ export default function FanLivePage() {
 
         {/* Quick Action: Direct Tip Button */}
         <button
-          onClick={() => setShowDirectTipModal(true)}
+          onClick={handleOpenDirectTipModal}
           className="btn btn-amber btn-lg"
           style={{ width: '100%', fontSize: '1rem', padding: '0.75rem' }}
         >
@@ -767,6 +840,55 @@ export default function FanLivePage() {
       )
       }
 
+      {/* REPEAT REQUEST WARNING MODAL ("You just requested this, send again?") */}
+      {repeatWarningSong && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center', padding: '1.75rem 1.5rem' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.1rem'
+            }}>
+              <Clock size={28} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 800 }}>
+              You Just Requested This Song
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              You requested <strong style={{ color: '#fff' }}>"{repeatWarningSong.title}"</strong> {repeatWarningSong.minutesAgo === 1 ? 'about a minute' : `${repeatWarningSong.minutesAgo} minutes`} ago. Would you like to request it again?
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setRepeatWarningSong(null)}
+                className="btn btn-outline"
+                style={{ width: '100%', padding: '0.75rem', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const s = repeatWarningSong.song;
+                  setRepeatWarningSong(null);
+                  handleOpenSongModal(s);
+                }}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '0.75rem', fontWeight: 700 }}
+              >
+                Yes, Send Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* REQUEST & STRIPE CHECKOUT MODAL */}
       {
         (selectedSong || isCustomRequest) && (
@@ -798,7 +920,7 @@ export default function FanLivePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { setSelectedSong(null); setIsCustomRequest(false); }}
+                  onClick={() => { setSelectedSong(null); setIsCustomRequest(false); setRequestIdempotencyKey(''); }}
                   className="btn btn-outline btn-sm"
                 >
                   <X size={16} />
@@ -818,6 +940,23 @@ export default function FanLivePage() {
                       className="input-field"
                       required
                     />
+                    {customSongTitle.trim() && getRecentSongRequest(customSongTitle) && (
+                      <div style={{
+                        fontSize: '0.8rem',
+                        color: '#f59e0b',
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.65rem',
+                        marginTop: '0.4rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                      }}>
+                        <Clock size={14} />
+                        <span>You just requested "{customSongTitle.trim()}" a couple of minutes ago.</span>
+                      </div>
+                    )}
                     <label className="label" style={{ marginTop: '0.5rem' }}>Artist / Band</label>
                     <input
                       type="text"
@@ -868,15 +1007,34 @@ export default function FanLivePage() {
                   />
                 </div>
 
-                {/* Fan Name */}
+                {/* Fan Name - STRICTLY REQUIRED */}
                 <div style={{ marginBottom: '1rem' }}>
-                  <label className="label">Your Name or Table (Optional)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                    <label className="label" style={{ marginBottom: 0, fontWeight: 700 }}>
+                      Your Name or Table <span style={{ color: '#ef4444' }}>* (Required)</span>
+                    </label>
+                    {!fanName.trim() && (
+                      <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                        Required for stage queue
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     placeholder="e.g. Jessica, Table 4, Birthday Crew"
                     value={fanName}
-                    onChange={(e) => setFanName(e.target.value)}
+                    onChange={(e) => {
+                      setFanName(e.target.value);
+                      try {
+                        localStorage.setItem('requestly_fan_name', e.target.value);
+                      } catch (err) {}
+                    }}
                     className="input-field"
+                    style={{
+                      borderColor: !fanName.trim() ? '#ef4444' : undefined,
+                      background: !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                    }}
+                    required
                   />
                 </div>
 
@@ -968,17 +1126,21 @@ export default function FanLivePage() {
                     songPrice={breakdown.baseAmount}
                     songTitle={isCustomRequest ? customSongTitle.trim() : (selectedSong?.title || 'Song Request')}
                     songArtist={isCustomRequest ? customSongArtist.trim() : (selectedSong?.artist || '')}
-                    fanName={fanName.trim() || 'Anonymous Fan'}
+                    fanName={fanName.trim()}
                     fanMessage={fanMessage.trim()}
                     bandId={band.id}
                     bandStripeAccountId={band.stripe_account_id}
                     slug={effectiveSlug}
                     isDirectTip={false}
                     eventId={activeEvent?.id || null}
+                    idempotencyKey={requestIdempotencyKey}
                     onSuccess={(createdRequest) => {
+                      const completedTitle = isCustomRequest ? customSongTitle.trim() : (selectedSong?.title || '');
+                      if (completedTitle) recordSongRequestSuccess(completedTitle);
                       setSelectedSong(null);
                       setIsCustomRequest(false);
                       setFanMessage('');
+                      setRequestIdempotencyKey('');
                       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
                       toast.success('🎉 Song request submitted with Apple Pay / Card!');
                       if (createdRequest) {
@@ -988,6 +1150,7 @@ export default function FanLivePage() {
                     onCancel={() => {
                       setSelectedSong(null);
                       setIsCustomRequest(false);
+                      setRequestIdempotencyKey('');
                     }}
                   />
                 </div>
@@ -1054,13 +1217,32 @@ export default function FanLivePage() {
                   </div>
 
                   <div style={{ marginBottom: '1rem' }}>
-                    <label className="label">Your Name (Optional)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <label className="label" style={{ marginBottom: 0, fontWeight: 700 }}>
+                        Your Name <span style={{ color: '#ef4444' }}>* (Required)</span>
+                      </label>
+                      {!fanName.trim() && (
+                        <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
+                          Required for shoutout
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
-                      placeholder="Generous Fan"
+                      placeholder="e.g. Jessica, Table 4, Generous Fan"
                       value={fanName}
-                      onChange={(e) => setFanName(e.target.value)}
+                      onChange={(e) => {
+                        setFanName(e.target.value);
+                        try {
+                          localStorage.setItem('requestly_fan_name', e.target.value);
+                        } catch (err) {}
+                      }}
                       className="input-field"
+                      style={{
+                        borderColor: !fanName.trim() ? '#ef4444' : undefined,
+                        background: !fanName.trim() ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                      }}
+                      required
                     />
                   </div>
 
@@ -1124,16 +1306,18 @@ export default function FanLivePage() {
                       songPrice={0}
                       songTitle="💖 Direct Tip to the Band"
                       songArtist="Thank You!"
-                      fanName={fanName.trim() || 'Generous Fan'}
+                      fanName={fanName.trim()}
                       fanMessage={fanMessage.trim()}
                       bandId={band.id}
                       bandStripeAccountId={band.stripe_account_id}
                       slug={effectiveSlug}
                       isDirectTip={true}
                       eventId={activeEvent?.id || null}
+                      idempotencyKey={requestIdempotencyKey}
                       onSuccess={(tipReq) => {
                         setShowDirectTipModal(false);
                         setFanMessage('');
+                        setRequestIdempotencyKey('');
                         confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
                         toast.success('🎉 Tip sent directly to the band! Thank you!');
                         if (tipReq) {
@@ -1142,6 +1326,7 @@ export default function FanLivePage() {
                       }}
                       onCancel={() => {
                         setShowDirectTipModal(false);
+                        setRequestIdempotencyKey('');
                       }}
                     />
                   </div>

@@ -47,6 +47,7 @@ export default function StripeEmbeddedCheckout({
   slug = 'live',
   isDirectTip = false,
   eventId = null,
+  idempotencyKey = '',
   onSuccess,
   onCancel,
 }) {
@@ -61,6 +62,15 @@ export default function StripeEmbeddedCheckout({
   const [hasWallets, setHasWallets] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Refs for concurrency lock & intent reuse per modal action
+  const isSubmittingRef = useRef(false);
+  const activeIntentRef = useRef(null);
+
+  // Reset activeIntentRef whenever idempotencyKey changes (e.g. fresh request modal session)
+  useEffect(() => {
+    activeIntentRef.current = null;
+  }, [idempotencyKey]);
 
   // Always keep latest props in a ref for event callbacks
   const propsRef = useRef({
@@ -80,6 +90,7 @@ export default function StripeEmbeddedCheckout({
     slug,
     isDirectTip,
     eventId,
+    idempotencyKey,
   });
 
   useEffect(() => {
@@ -100,6 +111,7 @@ export default function StripeEmbeddedCheckout({
       slug,
       isDirectTip,
       eventId,
+      idempotencyKey,
     };
   });
 
@@ -175,8 +187,18 @@ export default function StripeEmbeddedCheckout({
 
         // Confirm via Express Checkout (native Apple Pay double-click & Face ID)
         expEl.on('confirm', async () => {
-          setProcessing(true);
+          if (isSubmittingRef.current) return;
           const p = propsRef.current;
+
+          // Fan Name Validation: Strictly Required for song requests
+          if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
+            setErrorMessage('Please enter your name or table number above before authorizing.');
+            toast.error('Your name or table number is required');
+            return;
+          }
+
+          isSubmittingRef.current = true;
+          setProcessing(true);
           try {
             // 1. Validate & submit elements
             const { error: submitError } = await expElements.submit();
@@ -186,38 +208,62 @@ export default function StripeEmbeddedCheckout({
               return;
             }
 
-            // 2. Create PaymentIntent
-            const piRes = await fetch('/.netlify/functions/create-payment-intent', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                amount: p.amount,
-                artistNet: p.artistNet,
-                requestlyFee: p.requestlyFee,
-                fanFee: p.fanFee,
-                stripeFee: p.stripeFee,
-                bandId: p.bandId,
-                bandStripeAccountId: p.bandStripeAccountId,
-                songTitle: p.songTitle,
-                songArtist: p.songArtist,
-                songPrice: p.songPrice,
-                tipAmount: p.tipAmount,
-                fanName: p.fanName.trim() || 'Anonymous Fan',
-                fanMessage: p.fanMessage.trim(),
-                isDirectTip: p.isDirectTip,
-                eventId: p.eventId || null,
-              }),
-            });
+            // 2. Obtain or Reuse PaymentIntent (Idempotent per modal session)
+            let clientSecret = null;
+            let paymentIntentId = null;
 
-            const piData = await piRes.json();
-            if (!piData.success || !piData.clientSecret) {
-              throw new Error(piData.error || 'Failed to initialize payment');
+            if (
+              activeIntentRef.current &&
+              activeIntentRef.current.idempotencyKey === p.idempotencyKey &&
+              activeIntentRef.current.clientSecret
+            ) {
+              clientSecret = activeIntentRef.current.clientSecret;
+              paymentIntentId = activeIntentRef.current.paymentIntentId;
+            } else {
+              const piRes = await fetch('/.netlify/functions/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amount: p.amount,
+                  artistNet: p.artistNet,
+                  requestlyFee: p.requestlyFee,
+                  fanFee: p.fanFee,
+                  stripeFee: p.stripeFee,
+                  bandId: p.bandId,
+                  bandStripeAccountId: p.bandStripeAccountId,
+                  songTitle: p.songTitle,
+                  songArtist: p.songArtist,
+                  songPrice: p.songPrice,
+                  tipAmount: p.tipAmount,
+                  fanName: p.fanName.trim(),
+                  fanMessage: p.fanMessage.trim(),
+                  isDirectTip: p.isDirectTip,
+                  eventId: p.eventId || null,
+                  idempotencyKey: p.idempotencyKey || undefined,
+                }),
+              });
+
+              const piData = await piRes.json();
+              if (!piData.success || !piData.clientSecret) {
+                throw new Error(piData.error || 'Failed to initialize payment');
+              }
+
+              clientSecret = piData.clientSecret;
+              paymentIntentId = piData.paymentIntentId;
+
+              if (p.idempotencyKey) {
+                activeIntentRef.current = {
+                  idempotencyKey: p.idempotencyKey,
+                  clientSecret,
+                  paymentIntentId,
+                };
+              }
             }
 
             // 3. Confirm payment with Stripe (handles native Apple Pay & Google Pay)
             const { error, paymentIntent } = await stripe.confirmPayment({
               elements: expElements,
-              clientSecret: piData.clientSecret,
+              clientSecret,
               confirmParams: {
                 return_url: `${window.location.origin}/live/${p.slug}?payment_success=true&song=${encodeURIComponent(p.songTitle)}`,
               },
@@ -228,45 +274,66 @@ export default function StripeEmbeddedCheckout({
               setErrorMessage(error.message || 'Payment authorization failed');
               toast.error(error.message || 'Payment failed');
             } else {
-              // 4. Save confirmed request in Supabase
-              const { data: newReq, error: insertError } = await supabase
+              // 4. Save confirmed request in Supabase ONLY after Stripe confirms!
+              // Double-check existing to eliminate webhook race duplicate
+              const finalStripeId = paymentIntent?.id || paymentIntentId;
+              const { data: existing } = await supabase
                 .from('requests')
-                .insert({
-                  band_id: p.bandId,
-                  event_id: p.eventId || null,
-                  song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
-                  song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
-                  fan_name: p.fanName.trim() || 'Anonymous Fan',
-                  fan_message: p.fanMessage.trim(),
-                  song_price: Number(p.songPrice || 0),
-                  tip_amount: Number(p.tipAmount || 0),
-                  fan_fee: Number(p.fanFee || 0),
-                  total_paid: Number(p.amount),
-                  status: p.isDirectTip ? 'completed' : 'pending',
-                  payment_status: 'paid',
-                  payment_method: paymentIntent?.payment_method_types?.[0] || 'apple_pay',
-                  stripe_payment_id: paymentIntent?.id || piData.paymentIntentId,
-                })
-                .select()
-                .single();
+                .select('*')
+                .eq('stripe_payment_id', finalStripeId)
+                .maybeSingle();
 
-              if (insertError) {
-                console.error('Supabase insert error:', insertError);
+              let finalReq = existing;
+              if (!existing) {
+                const { data: newReq, error: insertError } = await supabase
+                  .from('requests')
+                  .insert({
+                    band_id: p.bandId,
+                    event_id: p.eventId || null,
+                    song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
+                    song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
+                    fan_name: p.fanName.trim(),
+                    fan_message: p.fanMessage.trim(),
+                    song_price: Number(p.songPrice || 0),
+                    tip_amount: Number(p.tipAmount || 0),
+                    fan_fee: Number(p.fanFee || 0),
+                    total_paid: Number(p.amount),
+                    status: p.isDirectTip ? 'completed' : 'pending',
+                    payment_status: 'paid',
+                    payment_method: paymentIntent?.payment_method_types?.[0] || 'apple_pay',
+                    stripe_payment_id: finalStripeId,
+                  })
+                  .select()
+                  .maybeSingle();
+
+                if (insertError) {
+                  // Handled by webhook or unique constraint
+                  const { data: refetched } = await supabase
+                    .from('requests')
+                    .select('*')
+                    .eq('stripe_payment_id', finalStripeId)
+                    .maybeSingle();
+                  finalReq = refetched;
+                } else {
+                  finalReq = newReq;
+                }
               }
 
+              activeIntentRef.current = null;
               const walletType = paymentIntent?.charges?.data?.[0]?.payment_method_details?.card?.wallet?.type ||
                 paymentIntent?.payment_method_types?.[0] || 'express_wallet';
               const walletLabel = walletType.includes('google') ? 'Google Pay' : 'Apple Pay';
 
               confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
               toast.success(`🎉 Payment completed with ${walletLabel}!`);
-              if (onSuccess) onSuccess(newReq);
+              if (onSuccess) onSuccess(finalReq);
             }
           } catch (err) {
             console.error('Express Checkout error:', err);
             setErrorMessage(err.message || 'Payment failed');
             toast.error(err.message || 'Payment failed');
           } finally {
+            isSubmittingRef.current = false;
             if (isMounted) setProcessing(false);
           }
         });
@@ -366,42 +433,82 @@ export default function StripeEmbeddedCheckout({
   // 5. Handle Card Form Submission
   const handleCardSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (isSubmittingRef.current || processing) return;
     if (!stripeInstance || !cardElement) return;
 
-    setProcessing(true);
-    setErrorMessage('');
     const p = propsRef.current;
 
-    try {
-      // 1. Create PaymentIntent on server
-      const piRes = await fetch('/.netlify/functions/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: p.amount,
-          artistNet: p.artistNet,
-          requestlyFee: p.requestlyFee,
-          fanFee: p.fanFee,
-          stripeFee: p.stripeFee,
-          bandId: p.bandId,
-          bandStripeAccountId: p.bandStripeAccountId,
-          songTitle: p.songTitle,
-          songArtist: p.songArtist,
-          fanName: p.fanName.trim() || 'Anonymous Fan',
-          fanMessage: p.fanMessage.trim(),
-          isDirectTip: p.isDirectTip,
-          eventId: p.eventId || null,
-        }),
-      });
+    // Fan Name Validation: Strictly Required for song requests
+    if (!p.isDirectTip && (!p.fanName || !p.fanName.trim() || p.fanName.trim().toLowerCase() === 'anonymous fan')) {
+      setErrorMessage('Please enter your name or table number above before sending your request.');
+      toast.error('Your name or table number is required');
+      const nameInput = document.querySelector('input[placeholder*="Jessica"]');
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
 
-      const piData = await piRes.json();
-      if (!piData.success || !piData.clientSecret) {
-        throw new Error(piData.error || 'Failed to initialize payment');
+    isSubmittingRef.current = true;
+    setProcessing(true);
+    setErrorMessage('');
+
+    try {
+      // 1. Obtain or Reuse PaymentIntent (Idempotent per modal session)
+      // If card payment failed on missing zip code, retrying reuses this exact PaymentIntent
+      let clientSecret = null;
+      let paymentIntentId = null;
+
+      if (
+        activeIntentRef.current &&
+        activeIntentRef.current.idempotencyKey === p.idempotencyKey &&
+        activeIntentRef.current.clientSecret
+      ) {
+        clientSecret = activeIntentRef.current.clientSecret;
+        paymentIntentId = activeIntentRef.current.paymentIntentId;
+      } else {
+        const piRes = await fetch('/.netlify/functions/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: p.amount,
+            artistNet: p.artistNet,
+            requestlyFee: p.requestlyFee,
+            fanFee: p.fanFee,
+            stripeFee: p.stripeFee,
+            bandId: p.bandId,
+            bandStripeAccountId: p.bandStripeAccountId,
+            songTitle: p.songTitle,
+            songArtist: p.songArtist,
+            fanName: p.fanName.trim(),
+            fanMessage: p.fanMessage.trim(),
+            isDirectTip: p.isDirectTip,
+            eventId: p.eventId || null,
+            idempotencyKey: p.idempotencyKey || undefined,
+          }),
+        });
+
+        const piData = await piRes.json();
+        if (!piData.success || !piData.clientSecret) {
+          throw new Error(piData.error || 'Failed to initialize payment');
+        }
+
+        clientSecret = piData.clientSecret;
+        paymentIntentId = piData.paymentIntentId;
+
+        if (p.idempotencyKey) {
+          activeIntentRef.current = {
+            idempotencyKey: p.idempotencyKey,
+            clientSecret,
+            paymentIntentId,
+          };
+        }
       }
 
       // 2. Confirm card payment with pre-authorized hold (or direct capture for tip)
       const { error, paymentIntent } = await stripeInstance.confirmCardPayment(
-        piData.clientSecret,
+        clientSecret,
         {
           payment_method: {
             card: cardElement,
@@ -413,47 +520,73 @@ export default function StripeEmbeddedCheckout({
       );
 
       if (error) {
+        // Android missing zip code or card declined error:
+        // Set error message, re-enable button, and keep activeIntentRef so retry reuses this PaymentIntent
         setErrorMessage(error.message || 'Card authorization failed');
         toast.error(error.message || 'Card payment failed');
       } else if (
         paymentIntent &&
         (paymentIntent.status === 'requires_capture' || paymentIntent.status === 'succeeded')
       ) {
-        // Confirmed! Insert into Supabase
-        const { data: newReq } = await supabase
+        // Confirmed! Deduplicate against webhook before inserting into Supabase
+        const finalStripeId = paymentIntent.id;
+        const { data: existing } = await supabase
           .from('requests')
-          .insert({
-            band_id: p.bandId,
-            event_id: p.eventId || null,
-            song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
-            song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
-            fan_name: p.fanName.trim() || 'Anonymous Fan',
-            fan_message: p.fanMessage.trim(),
-            song_price: Number(p.songPrice || 0),
-            tip_amount: Number(p.tipAmount || 0),
-            fan_fee: Number(p.fanFee || 0),
-            total_paid: Number(p.amount),
-            status: p.isDirectTip ? 'completed' : 'pending',
-            payment_status: 'paid',
-            payment_method: 'card',
-            stripe_payment_id: paymentIntent.id,
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('stripe_payment_id', finalStripeId)
+          .maybeSingle();
 
+        let finalReq = existing;
+        if (!existing) {
+          const { data: newReq, error: insertError } = await supabase
+            .from('requests')
+            .insert({
+              band_id: p.bandId,
+              event_id: p.eventId || null,
+              song_title: p.isDirectTip ? '💖 Direct Tip to the Band' : p.songTitle,
+              song_artist: p.isDirectTip ? 'Thank You!' : (p.songArtist || 'Custom Song'),
+              fan_name: p.fanName.trim(),
+              fan_message: p.fanMessage.trim(),
+              song_price: Number(p.songPrice || 0),
+              tip_amount: Number(p.tipAmount || 0),
+              fan_fee: Number(p.fanFee || 0),
+              total_paid: Number(p.amount),
+              status: p.isDirectTip ? 'completed' : 'pending',
+              payment_status: 'paid',
+              payment_method: 'card',
+              stripe_payment_id: finalStripeId,
+            })
+            .select()
+            .maybeSingle();
+
+          if (insertError) {
+            // Handled by webhook or unique constraint
+            const { data: refetched } = await supabase
+              .from('requests')
+              .select('*')
+              .eq('stripe_payment_id', finalStripeId)
+              .maybeSingle();
+            finalReq = refetched;
+          } else {
+            finalReq = newReq;
+          }
+        }
+
+        activeIntentRef.current = null;
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
         toast.success(
           p.isDirectTip
             ? '🎉 Tip sent successfully to the band!'
             : '🎉 Song request submitted & sent to the stage!'
         );
-        if (onSuccess) onSuccess(newReq);
+        if (onSuccess) onSuccess(finalReq);
       }
     } catch (err) {
       console.error('Card submit error:', err);
       setErrorMessage(err.message || 'Payment failed');
       toast.error(err.message || 'Payment failed');
     } finally {
+      isSubmittingRef.current = false;
       setProcessing(false);
     }
   };
@@ -559,7 +692,11 @@ export default function StripeEmbeddedCheckout({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            opacity: processing ? 0.65 : 1,
+            cursor: processing ? 'not-allowed' : 'pointer',
+            pointerEvents: processing ? 'none' : 'auto',
+            transition: 'all 0.15s ease'
           }}
         >
           {processing ? (
