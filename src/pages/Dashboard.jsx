@@ -18,7 +18,9 @@ import {
   Sparkles,
   Heart,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  BarChart3
 } from 'lucide-react';
 import { supabase, DEMO_BAND_ID } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -317,12 +319,12 @@ export default function Dashboard() {
         updates.payment_status = 'paid';
       }
 
-      // If declining/rejecting, release authorization hold immediately so fan is NEVER charged!
-      if (newStatus === 'declined' && targetReq?.payment_status === 'authorized') {
-        if (targetReq.stripe_payment_id) {
+      // If declining/rejecting, release authorization hold OR issue full refund so fan is NOT charged!
+      if (newStatus === 'declined') {
+        if (targetReq?.stripe_payment_id) {
           await cancelStripePayment(targetReq.stripe_payment_id);
         }
-        updates.payment_status = 'cancelled';
+        updates.payment_status = 'refunded';
       }
 
       const { error } = await supabase
@@ -341,7 +343,7 @@ export default function Dashboard() {
       } else if (newStatus === 'completed') {
         toast.success('Marked as played!');
       } else if (newStatus === 'declined') {
-        toast('Request declined. Fan was not charged.', { icon: 'ℹ️' });
+        toast('Request declined & payment refunded to fan.', { icon: 'ℹ️' });
       }
     } catch (err) {
       toast.error('Failed to update status');
@@ -419,10 +421,36 @@ export default function Dashboard() {
     );
   });
 
-  // Sort pinned first
+  // Helper to format date headers for dividing song requests by date
+  const formatDateDivider = (dateObj) => {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const diffDays = Math.round((today - targetDate) / (1000 * 60 * 60 * 24));
+
+    const formattedDateStr = dateObj.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: dateObj.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+
+    if (diffDays === 0) {
+      return `Today • ${formattedDateStr}`;
+    } else if (diffDays === 1) {
+      return `Yesterday • ${formattedDateStr}`;
+    } else {
+      return formattedDateStr;
+    }
+  };
+
+  // Sort pinned first in live queue; in history and completed tabs sort by date descending
   const sortedRequests = [...filteredRequests].sort((a, b) => {
-    if (a.is_pinned && !b.is_pinned) return -1;
-    if (!a.is_pinned && b.is_pinned) return 1;
+    if (activeTab === 'live') {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+    }
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
@@ -466,6 +494,11 @@ export default function Dashboard() {
             {soundEnabled ? <Volume2 size={16} color="#10b981" /> : <VolumeX size={16} />}
             <span>{soundEnabled ? 'Sound On' : 'Muted'}</span>
           </button>
+
+          <Link to="/analytics" className="btn btn-outline btn-sm" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}>
+            <BarChart3 size={16} />
+            <span>Analytics</span>
+          </Link>
 
           <Link to="/stage-mode" className="btn btn-outline btn-sm">
             <Tv size={16} color="#3b82f6" />
@@ -616,7 +649,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {sortedRequests.map((req) => {
+          {sortedRequests.map((req, index) => {
             const isPlaying = req.status === 'playing';
             const isUpNext = req.status === 'up_next';
             const isCompleted = req.status === 'completed';
@@ -625,74 +658,117 @@ export default function Dashboard() {
             const tipAmount = Number(req.tip_amount) || 0;
             const netAmount = songPrice + tipAmount;
 
+            // Check if this request begins a new calendar date
+            const reqDate = req.created_at ? new Date(req.created_at) : null;
+            const prevReq = index > 0 ? sortedRequests[index - 1] : null;
+            const prevReqDate = prevReq?.created_at ? new Date(prevReq.created_at) : null;
+
+            const isNewDateGroup = 
+              !prevReqDate || 
+              !reqDate || 
+              reqDate.toDateString() !== prevReqDate.toDateString();
+
             return (
-              <div
-                key={req.id}
-                className="glass-card"
-                style={{
-                  padding: '1.5rem',
-                  borderColor: isPlaying 
-                    ? 'rgba(16, 185, 129, 0.6)' 
-                    : isUpNext 
-                    ? 'rgba(245, 158, 11, 0.5)' 
-                    : req.is_pinned 
-                    ? 'rgba(59, 130, 246, 0.55)' 
-                    : 'var(--border-subtle)',
-                  background: isPlaying 
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(18, 20, 30, 0.95))' 
-                    : isUpNext
-                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(18, 20, 30, 0.95))'
-                    : 'var(--bg-card)',
-                  boxShadow: isPlaying ? '0 0 25px rgba(16, 185, 129, 0.2)' : 'none'
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  {/* Song Artwork & Fan Details */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flex: '1 1 300px' }}>
-                    <SongArtwork
-                      title={req.song_title}
-                      artist={req.song_artist}
-                      size={54}
-                      radius={10}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                        {isPlaying && (
-                          <span className="badge badge-emerald">
-                            <span className="live-pulse" /> NOW PLAYING
+              <div key={req.id}>
+                {/* Visual Date Divider between different calendar days */}
+                {isNewDateGroup && reqDate && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    margin: index === 0 ? '0.25rem 0 0.85rem 0' : '1.75rem 0 0.85rem 0'
+                  }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.35rem 0.85rem',
+                      background: 'rgba(59, 130, 246, 0.14)',
+                      border: '1px solid rgba(59, 130, 246, 0.35)',
+                      borderRadius: '9999px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#93c5fd',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase'
+                    }}>
+                      <Calendar size={13} />
+                      <span>{formatDateDivider(reqDate)}</span>
+                    </div>
+                    <div style={{
+                      flex: 1,
+                      height: '1px',
+                      background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.35), rgba(255, 255, 255, 0.05))'
+                    }} />
+                  </div>
+                )}
+
+                <div
+                  className="glass-card"
+                  style={{
+                    padding: '1.5rem',
+                    borderColor: isPlaying 
+                      ? 'rgba(16, 185, 129, 0.6)' 
+                      : isUpNext 
+                      ? 'rgba(245, 158, 11, 0.5)' 
+                      : req.is_pinned 
+                      ? 'rgba(59, 130, 246, 0.55)' 
+                      : 'var(--border-subtle)',
+                    background: isPlaying 
+                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(18, 20, 30, 0.95))' 
+                      : isUpNext
+                      ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(18, 20, 30, 0.95))'
+                      : 'var(--bg-card)',
+                    boxShadow: isPlaying ? '0 0 25px rgba(16, 185, 129, 0.2)' : 'none'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    {/* Song Artwork & Fan Details */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flex: '1 1 300px' }}>
+                      <SongArtwork
+                        title={req.song_title}
+                        artist={req.song_artist}
+                        size={54}
+                        radius={10}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                          {isPlaying && (
+                            <span className="badge badge-emerald">
+                              <span className="live-pulse" /> NOW PLAYING
+                            </span>
+                          )}
+                          {isUpNext && (
+                            <span className="badge badge-amber">
+                              <Clock size={12} /> UP NEXT
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="badge badge-cyan">
+                              <CheckCircle size={12} /> COMPLETED
+                            </span>
+                          )}
+                          {isDeclined && (
+                            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
+                              DECLINED
+                            </span>
+                          )}
+                          {req.is_pinned && (
+                            <span className="badge badge-blue">
+                              <Pin size={12} /> PINNED
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                            {new Date(req.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                        )}
-                        {isUpNext && (
-                          <span className="badge badge-amber">
-                            <Clock size={12} /> UP NEXT
-                          </span>
-                        )}
-                        {isCompleted && (
-                          <span className="badge badge-cyan">
-                            <CheckCircle size={12} /> COMPLETED
-                          </span>
-                        )}
-                        {isDeclined && (
-                          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-                            DECLINED
-                          </span>
-                        )}
-                        {req.is_pinned && (
-                          <span className="badge badge-blue">
-                            <Pin size={12} /> PINNED
-                          </span>
-                        )}
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                          {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
+                        </div>
 
                       <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>
                         {req.song_title}
@@ -876,7 +952,7 @@ export default function Dashboard() {
                     {/* Declined */}
                     {req.status === 'declined' && (
                       <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
-                        <X size={14} /> DECLINED (NOT CHARGED)
+                        <X size={14} /> DECLINED (REFUNDED)
                       </span>
                     )}
                   </div>
@@ -894,8 +970,9 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
         </div>
       )}
 

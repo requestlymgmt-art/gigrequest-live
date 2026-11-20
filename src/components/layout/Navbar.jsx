@@ -10,7 +10,8 @@ import {
   LogIn, 
   Menu, 
   X,
-  Play
+  Play,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase, DEMO_BAND_ID } from '../../lib/supabase';
@@ -93,6 +94,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Live Queue', path: '/dashboard', icon: Radio },
+    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Setlist & Pricing', path: '/setlist', icon: Music2 },
     { name: 'Gig QR Code', path: '/qr-code', icon: QrCode },
     { name: 'Settings & Stripe', path: '/settings', icon: Settings },

@@ -44,7 +44,7 @@ export const handler = async (event) => {
       };
     }
 
-    if (stripe && process.env.STRIPE_SECRET_KEY && !paymentIntentId.startsWith('pi_hold_') && !paymentIntentId.startsWith('pi_test_')) {
+    if (stripe && stripeKey && !paymentIntentId.startsWith('pi_hold_') && !paymentIntentId.startsWith('pi_test_')) {
       let targetPi = paymentIntentId;
       // If a Stripe Checkout Session ID (cs_...) was stored, retrieve its underlying PaymentIntent
       if (targetPi.startsWith('cs_')) {
@@ -60,16 +60,90 @@ export const handler = async (event) => {
         }
       }
 
-      const canceledIntent = await stripe.paymentIntents.cancel(targetPi);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          status: canceledIntent.status,
-          mode: 'live_stripe',
-        }),
-      };
+      // Check current status of the PaymentIntent on Stripe
+      const pi = await stripe.paymentIntents.retrieve(targetPi);
+
+      if (pi.status === 'succeeded') {
+        // Payment was captured/paid! Issue an immediate 100% full refund to the fan!
+        let refund;
+        try {
+          refund = await stripe.refunds.create({
+            payment_intent: targetPi,
+            reverse_transfer: true,
+          });
+        } catch (revErr) {
+          // If destination transfer was not attached or collecting on platform, refund directly
+          refund = await stripe.refunds.create({
+            payment_intent: targetPi,
+          });
+        }
+
+        console.log(`[Stripe Refund] Successfully refunded payment ${targetPi} via refund ${refund.id}`);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            action: 'refunded',
+            refundId: refund.id,
+            status: refund.status,
+            amount: refund.amount / 100,
+            mode: 'live_stripe',
+          }),
+        };
+      } else if (pi.status === 'requires_capture') {
+        // Uncaptured authorization hold: release/cancel it so the fan is never charged
+        const canceledIntent = await stripe.paymentIntents.cancel(targetPi);
+        console.log(`[Stripe Hold Cancel] Canceled hold for ${targetPi}`);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            action: 'canceled_hold',
+            status: canceledIntent.status,
+            mode: 'live_stripe',
+          }),
+        };
+      } else if (pi.status === 'canceled') {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            action: 'already_canceled',
+            status: 'canceled',
+            mode: 'live_stripe',
+          }),
+        };
+      } else {
+        // Fallback: try cancel, if failed try refund
+        try {
+          const canceledIntent = await stripe.paymentIntents.cancel(targetPi);
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              action: 'canceled',
+              status: canceledIntent.status,
+              mode: 'live_stripe',
+            }),
+          };
+        } catch (cancErr) {
+          const refund = await stripe.refunds.create({ payment_intent: targetPi });
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              action: 'refunded',
+              refundId: refund.id,
+              mode: 'live_stripe',
+            }),
+          };
+        }
+      }
     }
 
     // In simulation / test mode:

@@ -11,6 +11,7 @@ import QRCodeHub from './pages/QRCodeHub';
 import StageMode from './pages/StageMode';
 import ProfileSettings from './pages/ProfileSettings';
 import FanLivePage from './pages/FanLivePage';
+import BandAnalytics from './pages/BandAnalytics';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -43,6 +44,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analytics" element={<BandAnalytics />} />
           <Route path="/setlist" element={<Setlist />} />
           <Route path="/qr-code" element={<QRCodeHub />} />
           <Route path="/stage-mode" element={<StageMode />} />
