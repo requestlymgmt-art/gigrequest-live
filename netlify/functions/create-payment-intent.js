@@ -66,6 +66,20 @@ export const handler = async (event) => {
       ? Math.round(Number(body.artistNet) * 100)
       : Math.max(0, amountInCents - feeInCents - Math.round(Number(body.stripeFee || 0) * 100));
 
+    // Robust fallback: ensure songPrice and tipAmount are never empty or 0 on paid song requests
+    let effectiveSongPrice = body.songPrice !== undefined && body.songPrice !== null ? Number(body.songPrice) : null;
+    let effectiveTipAmount = body.tipAmount !== undefined && body.tipAmount !== null ? Number(body.tipAmount) : null;
+
+    if (effectiveSongPrice === null || (effectiveSongPrice === 0 && !isDirectTip && Number(body.artistNet || 0) > 0)) {
+      if (effectiveTipAmount !== null && effectiveTipAmount > 0) {
+        effectiveSongPrice = Math.max(0, Number(body.artistNet || 0) - effectiveTipAmount);
+      } else {
+        effectiveSongPrice = Number(body.artistNet || 5.0);
+        effectiveTipAmount = 0;
+      }
+    }
+    if (effectiveTipAmount === null) effectiveTipAmount = 0;
+
     // Invoke Stripe Live API
     if (stripe) {
       const paymentIntentParams = {
@@ -84,8 +98,8 @@ export const handler = async (event) => {
           songArtist: body.songArtist || '',
           fanName: fanName?.trim() || 'Generous Fan',
           fanMessage: body.fanMessage || '',
-          songPrice: (body.songPrice || 0).toString(),
-          tipAmount: (body.tipAmount || 0).toString(),
+          songPrice: (effectiveSongPrice || 0).toString(),
+          tipAmount: (effectiveTipAmount || 0).toString(),
           fanFee: (body.fanFee || 0).toString(),
           bandId: bandId || '',
           eventId: eventId || '',

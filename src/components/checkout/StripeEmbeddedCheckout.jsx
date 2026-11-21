@@ -516,6 +516,8 @@ export default function StripeEmbeddedCheckout({
             bandStripeAccountId: p.bandStripeAccountId,
             songTitle: p.songTitle,
             songArtist: p.songArtist,
+            songPrice: p.songPrice,
+            tipAmount: p.tipAmount,
             fanName: p.fanName.trim(),
             fanMessage: p.fanMessage.trim(),
             isDirectTip: p.isDirectTip,

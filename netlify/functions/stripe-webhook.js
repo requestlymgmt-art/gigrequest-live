@@ -77,15 +77,23 @@ export const handler = async (event) => {
           .maybeSingle();
 
         if (!existing) {
+          let resolvedSongPrice = Number(meta.songPrice || 0);
+          let resolvedTipAmount = Number(meta.tipAmount || 0);
+          if (resolvedSongPrice === 0 && Number(pi.amount) > 0) {
+            const paidDollars = Number(pi.amount) / 100;
+            const netAfterFees = Math.max(0, paidDollars - 2.0 - (paidDollars * 0.029 + 0.3));
+            resolvedSongPrice = Math.max(5.00, Number((netAfterFees - resolvedTipAmount).toFixed(2)));
+          }
+
           const { error: insertErr } = await supabase.from('requests').insert({
             band_id: meta.bandId,
             event_id: meta.eventId || null,
             song_title: meta.songTitle,
             song_artist: meta.songArtist || '',
             fan_name: meta.fanName || 'Fan',
-            fan_message: meta.fanMessage || '',
-            song_price: Number(meta.songPrice || 0),
-            tip_amount: Number(meta.tipAmount || 0),
+            fanMessage: meta.fanMessage || '',
+            song_price: resolvedSongPrice,
+            tip_amount: resolvedTipAmount,
             fan_fee: Number(meta.fanFee || 0),
             total_paid: Number(pi.amount) / 100,
             status: 'pending',
@@ -125,6 +133,15 @@ export const handler = async (event) => {
 
         if (!existing) {
           const isTip = meta.isDirectTip === 'true';
+          let resolvedSongPrice = Number(meta.songPrice || 0);
+          let resolvedTipAmount = Number(meta.tipAmount || (isTip ? Number(pi.amount) / 100 : 0));
+
+          if (!isTip && resolvedSongPrice === 0 && Number(pi.amount) > 0) {
+            const paidDollars = Number(pi.amount) / 100;
+            const netAfterFees = Math.max(0, paidDollars - 2.0 - (paidDollars * 0.029 + 0.3));
+            resolvedSongPrice = Math.max(5.00, Number((netAfterFees - resolvedTipAmount).toFixed(2)));
+          }
+
           const { error: insertErr } = await supabase.from('requests').insert({
             band_id: meta.bandId,
             event_id: meta.eventId || null,
@@ -132,8 +149,8 @@ export const handler = async (event) => {
             song_artist: isTip ? 'Thank You!' : (meta.songArtist || ''),
             fan_name: meta.fanName || 'Fan',
             fan_message: meta.fanMessage || '',
-            song_price: Number(meta.songPrice || 0),
-            tip_amount: Number(meta.tipAmount || (isTip ? Number(pi.amount) / 100 : 0)),
+            song_price: resolvedSongPrice,
+            tip_amount: resolvedTipAmount,
             fan_fee: Number(meta.fanFee || 0),
             total_paid: Number(pi.amount) / 100,
             status: isTip ? 'completed' : 'pending',

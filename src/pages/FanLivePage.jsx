@@ -341,7 +341,7 @@ export default function FanLivePage() {
     try {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
-    } catch (e) {}
+    } catch (e) { }
     setFanMessage('');
     // New idempotency key for this fresh modal session
     setRequestIdempotencyKey(`${band?.id || 'band'}_song_${song?.id || 'song'}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
@@ -358,7 +358,7 @@ export default function FanLivePage() {
     try {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
-    } catch (e) {}
+    } catch (e) { }
     setFanMessage('');
     setRequestIdempotencyKey(`${band?.id || 'band'}_custom_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
   };
@@ -367,7 +367,7 @@ export default function FanLivePage() {
     try {
       const saved = localStorage.getItem('requestly_fan_name');
       if (saved) setFanName(saved);
-    } catch (e) {}
+    } catch (e) { }
     setNameError(false);
     setRequestIdempotencyKey(`${band?.id || 'band'}_tip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
     setShowDirectTipModal(true);
@@ -1092,7 +1092,7 @@ export default function FanLivePage() {
                       if (nameError && e.target.value.trim().length >= 2) setNameError(false);
                       try {
                         localStorage.setItem('requestly_fan_name', e.target.value);
-                      } catch (err) {}
+                      } catch (err) { }
                     }}
                     className="input-field"
                     style={{
@@ -1305,7 +1305,7 @@ export default function FanLivePage() {
                         if (nameError && e.target.value.trim().length >= 2) setNameError(false);
                         try {
                           localStorage.setItem('requestly_fan_name', e.target.value);
-                        } catch (err) {}
+                        } catch (err) { }
                       }}
                       className="input-field"
                       style={{
