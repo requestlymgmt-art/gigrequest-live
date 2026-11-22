@@ -37,14 +37,6 @@ import toast from 'react-hot-toast';
 
 const DEFAULT_ADMIN_PASSCODE = 'requestly2026';
 
-const getStoredAdminPasscode = () => {
-  try {
-    return localStorage.getItem('requestly_admin_passcode') || DEFAULT_ADMIN_PASSCODE;
-  } catch {
-    return DEFAULT_ADMIN_PASSCODE;
-  }
-};
-
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try {
@@ -53,8 +45,36 @@ export default function AdminDashboard() {
       return false;
     }
   });
+  const [activePasscode, setActivePasscode] = useState(() => {
+    try {
+      return localStorage.getItem('requestly_admin_passcode') || DEFAULT_ADMIN_PASSCODE;
+    } catch {
+      return DEFAULT_ADMIN_PASSCODE;
+    }
+  });
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState(false);
+
+  // Sync custom passcode from persistent cloud storage on load
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('announcement_banner')
+      .eq('id', DEMO_BAND_ID)
+      .single()
+      .then(({ data }) => {
+        if (data?.announcement_banner?.startsWith('ADMIN_PASS:')) {
+          const pass = data.announcement_banner.replace('ADMIN_PASS:', '').trim();
+          if (pass) {
+            setActivePasscode(pass);
+            try {
+              localStorage.setItem('requestly_admin_passcode', pass);
+            } catch {}
+          }
+        }
+      })
+      .catch((err) => console.warn('Could not sync remote admin passcode:', err));
+  }, []);
 
   // Change Passcode Modal States
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
@@ -81,12 +101,7 @@ export default function AdminDashboard() {
   // Authenticate Admin
   const handleLogin = (e) => {
     e?.preventDefault();
-    const validPasscode = getStoredAdminPasscode();
-    if (
-      passcodeInput.trim() === validPasscode ||
-      passcodeInput.trim() === DEFAULT_ADMIN_PASSCODE ||
-      passcodeInput.trim().toLowerCase() === 'admin'
-    ) {
+    if (passcodeInput.trim() === activePasscode) {
       try {
         sessionStorage.setItem('requestly_admin_auth', 'true');
       } catch {}
@@ -100,10 +115,9 @@ export default function AdminDashboard() {
   };
 
   // Change Admin Passcode
-  const handleChangePasscode = (e) => {
+  const handleChangePasscode = async (e) => {
     e.preventDefault();
-    const currentValid = getStoredAdminPasscode();
-    if (currentPasscode.trim() !== currentValid && currentPasscode.trim() !== DEFAULT_ADMIN_PASSCODE) {
+    if (currentPasscode.trim() !== activePasscode) {
       toast.error('Current passcode is incorrect');
       return;
     }
@@ -116,15 +130,25 @@ export default function AdminDashboard() {
       return;
     }
 
+    const newPass = newPasscode.trim();
     try {
-      localStorage.setItem('requestly_admin_passcode', newPasscode.trim());
+      localStorage.setItem('requestly_admin_passcode', newPass);
+      setActivePasscode(newPass);
+
+      // Persist across devices in Supabase
+      await supabase
+        .from('profiles')
+        .update({ announcement_banner: `ADMIN_PASS:${newPass}` })
+        .eq('id', DEMO_BAND_ID);
+
       toast.success('Admin passcode updated successfully!');
       setShowPasscodeModal(false);
       setCurrentPasscode('');
       setNewPasscode('');
       setConfirmNewPasscode('');
     } catch (err) {
-      toast.error('Failed to save passcode in browser');
+      console.error('Save passcode error:', err);
+      toast.error('Failed to save new passcode');
     }
   };
 
@@ -460,7 +484,7 @@ export default function AdminDashboard() {
 
             {passcodeError && (
               <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '1rem', fontWeight: 600 }}>
-                Incorrect passcode. Default is <code>requestly2026</code>
+                Incorrect passcode. Please try again.
               </p>
             )}
 
@@ -469,10 +493,6 @@ export default function AdminDashboard() {
               <span>Unlock Admin Dashboard</span>
             </button>
           </form>
-
-          <div style={{ marginTop: '1.5rem', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-            Passcode: <code>requestly2026</code>
-          </div>
         </div>
       </div>
     );
