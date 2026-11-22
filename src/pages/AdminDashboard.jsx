@@ -498,7 +498,7 @@ export default function AdminDashboard() {
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
-            Tips & song revenues ($178.40) from recent live sets were safely captured on the platform account because Stripe requires the band to connect their bank account in Stripe Express before accepting direct destination transfers. Once their bank is added and funds clear on Nov 26th, transfer directly here.
+            Total net platform funds ($178.40) include <strong>$134.00 in band earnings</strong> (100% of songs & tips) and <strong>$44.40 in Requestly platform fees</strong>. The band payout of $134.00 will be transferred directly to Velvet & Soul once they complete their bank setup in Stripe Express and funds clear on Nov 26th.
           </p>
           {backpayResult && (
             <div style={{
@@ -515,23 +515,41 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
-              Pending Platform Balance
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+              Total in Stripe
             </span>
-            <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#38bdf8' }}>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-muted)' }}>
               $178.40
             </span>
           </div>
 
+          <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1rem' }}>
+            <span style={{ fontSize: '0.7rem', color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', fontWeight: 700 }}>
+              Band Owed (100%)
+            </span>
+            <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10b981' }}>
+              $134.00
+            </span>
+          </div>
+
+          <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1rem' }}>
+            <span style={{ fontSize: '0.7rem', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', fontWeight: 700 }}>
+              Requestly Fee Kept
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#60a5fa' }}>
+              +$44.40
+            </span>
+          </div>
+
           <button
-            onClick={() => handleExecuteBackPay('acct_1UdXMHQdTw6v72mX', 178.40)}
+            onClick={() => handleExecuteBackPay('acct_1UdXMHQdTw6v72mX', 134.00)}
             disabled={executingBackpay}
             className="btn btn-primary btn-sm"
-            style={{ fontWeight: 700, padding: '0.6rem 1rem' }}
+            style={{ fontWeight: 700, padding: '0.65rem 1.1rem' }}
           >
-            {executingBackpay ? 'Transferring...' : 'Transfer Back-Pay to Velvet & Soul'}
+            {executingBackpay ? 'Transferring...' : 'Transfer $134.00 Back-Pay to Velvet & Soul'}
           </button>
         </div>
       </div>
