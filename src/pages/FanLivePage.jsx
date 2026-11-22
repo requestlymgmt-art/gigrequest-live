@@ -819,13 +819,14 @@ export default function FanLivePage() {
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={{
-                        fontSize: '0.98rem',
+                        fontSize: '0.96rem',
                         color: '#fff',
                         fontWeight: 700,
                         marginBottom: '0.25rem',
                         lineHeight: 1.3,
-                        wordBreak: 'break-word',
+                        wordBreak: 'normal',
                         overflowWrap: 'break-word',
+                        hyphens: 'none',
                       }}>
                         {song.title}
                       </h4>
@@ -845,24 +846,24 @@ export default function FanLivePage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: '0.35rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: '0.25rem' }}>
                     <div
                       className={isLiveEvent ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"}
                       style={{
-                        padding: '0.45rem 0.75rem',
+                        padding: '0.4rem 0.65rem',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.35rem',
+                        gap: '0.3rem',
                         whiteSpace: 'nowrap',
                         borderRadius: '8px',
                         fontWeight: 800,
-                        fontSize: '0.88rem',
+                        fontSize: '0.84rem',
                         boxShadow: isLiveEvent ? '0 2px 8px rgba(59, 130, 246, 0.35)' : 'none',
                         color: isLiveEvent ? '#fff' : 'var(--text-muted)',
                         borderColor: isLiveEvent ? 'transparent' : 'rgba(255, 255, 255, 0.15)',
                       }}
                     >
-                      <span>${price.toFixed(2)}</span>
+                      <span>${price % 1 === 0 ? price : price.toFixed(2)}</span>
                       <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 600 }}>
                         {isLiveEvent ? '• Request' : '• Off-Stage'}
                       </span>

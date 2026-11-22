@@ -116,10 +116,10 @@ export default function Navbar() {
         height: '70px',
       }}>
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', minWidth: 0, flexShrink: 1 }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', flexShrink: 0 }}>
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '10px',
             background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             display: 'flex',
@@ -129,12 +129,12 @@ export default function Navbar() {
             boxShadow: '0 0 16px rgba(59, 130, 246, 0.45)',
             flexShrink: 0
           }}>
-            <Radio size={20} />
+            <Radio size={18} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.25rem',
+              fontSize: '1.2rem',
               fontWeight: 800,
               letterSpacing: '-0.025em',
               color: '#fff',
@@ -143,7 +143,7 @@ export default function Navbar() {
             }}>
               Request<span style={{ color: '#3b82f6' }}>ly</span>
             </span>
-            <span className="nav-subtitle" style={{ fontSize: '0.65rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            <span className="nav-subtitle" style={{ fontSize: '0.62rem', color: 'var(--text-dim)', letterSpacing: '0.06em', fontWeight: 600, whiteSpace: 'nowrap' }}>
               LIVE STAGE TIPPING
             </span>
           </div>
@@ -246,12 +246,20 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Link to="/login" className="btn btn-outline btn-sm">
-                <LogIn size={15} />
-                <span>Musician Login</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+              <Link
+                to="/login"
+                className="btn btn-outline btn-sm"
+                style={{ padding: '0.42rem 0.65rem', fontSize: '0.82rem', whiteSpace: 'nowrap', gap: '0.35rem' }}
+              >
+                <LogIn size={14} />
+                <span>Login</span>
               </Link>
-              <Link to="/register" className="btn btn-primary btn-sm">
+              <Link
+                to="/register"
+                className="btn btn-primary btn-sm"
+                style={{ padding: '0.42rem 0.75rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              >
                 <span>Start Free</span>
               </Link>
             </div>

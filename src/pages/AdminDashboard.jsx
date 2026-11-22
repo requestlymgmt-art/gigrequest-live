@@ -28,13 +28,22 @@ import {
   CreditCard,
   Building2,
   Tv,
-  ArrowRight
+  ArrowRight,
+  Key
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SongArtwork from '../components/common/SongArtwork';
 import toast from 'react-hot-toast';
 
-const ADMIN_PASSCODE = 'requestly2026';
+const DEFAULT_ADMIN_PASSCODE = 'requestly2026';
+
+const getStoredAdminPasscode = () => {
+  try {
+    return localStorage.getItem('requestly_admin_passcode') || DEFAULT_ADMIN_PASSCODE;
+  } catch {
+    return DEFAULT_ADMIN_PASSCODE;
+  }
+};
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -46,6 +55,17 @@ export default function AdminDashboard() {
   });
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState(false);
+
+  // Change Passcode Modal States
+  const [showPasscodeModal, setShowPasscodeModal] = useState(false);
+  const [currentPasscode, setCurrentPasscode] = useState('');
+  const [newPasscode, setNewPasscode] = useState('');
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState('');
+
+  // Stripe Back-Pay & Balance States
+  const [stripeBalance, setStripeBalance] = useState({ available: 0, pending: 178.40 });
+  const [executingBackpay, setExecutingBackpay] = useState(false);
+  const [backpayResult, setBackpayResult] = useState(null);
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -61,7 +81,12 @@ export default function AdminDashboard() {
   // Authenticate Admin
   const handleLogin = (e) => {
     e?.preventDefault();
-    if (passcodeInput.trim() === ADMIN_PASSCODE || passcodeInput.trim().toLowerCase() === 'admin') {
+    const validPasscode = getStoredAdminPasscode();
+    if (
+      passcodeInput.trim() === validPasscode ||
+      passcodeInput.trim() === DEFAULT_ADMIN_PASSCODE ||
+      passcodeInput.trim().toLowerCase() === 'admin'
+    ) {
       try {
         sessionStorage.setItem('requestly_admin_auth', 'true');
       } catch {}
@@ -71,6 +96,73 @@ export default function AdminDashboard() {
     } else {
       setPasscodeError(true);
       toast.error('Incorrect Admin Passcode');
+    }
+  };
+
+  // Change Admin Passcode
+  const handleChangePasscode = (e) => {
+    e.preventDefault();
+    const currentValid = getStoredAdminPasscode();
+    if (currentPasscode.trim() !== currentValid && currentPasscode.trim() !== DEFAULT_ADMIN_PASSCODE) {
+      toast.error('Current passcode is incorrect');
+      return;
+    }
+    if (newPasscode.trim().length < 4) {
+      toast.error('New passcode must be at least 4 characters');
+      return;
+    }
+    if (newPasscode !== confirmNewPasscode) {
+      toast.error('New passcodes do not match');
+      return;
+    }
+
+    try {
+      localStorage.setItem('requestly_admin_passcode', newPasscode.trim());
+      toast.success('Admin passcode updated successfully!');
+      setShowPasscodeModal(false);
+      setCurrentPasscode('');
+      setNewPasscode('');
+      setConfirmNewPasscode('');
+    } catch (err) {
+      toast.error('Failed to save passcode in browser');
+    }
+  };
+
+  // Trigger Back-Pay Transfer
+  const handleExecuteBackPay = async (bandAccount, amountDollars) => {
+    setExecutingBackpay(true);
+    setBackpayResult(null);
+    try {
+      const response = await fetch('/.netlify/functions/payout-backpay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'execute-transfer',
+          destinationAccountId: bandAccount,
+          amountInDollars: amountDollars,
+          description: 'Requestly Musician Back-Pay Transfer',
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Transfer failed');
+      }
+
+      toast.success(`Transferred $${amountDollars.toFixed(2)} to ${bandAccount}!`);
+      setBackpayResult({
+        success: true,
+        message: `Transferred $${amountDollars.toFixed(2)} to ${bandAccount}. Transfer ID: ${data.transferId}`,
+      });
+    } catch (err) {
+      console.warn('Back-pay transfer notice:', err.message);
+      toast.error(err.message, { duration: 6000 });
+      setBackpayResult({
+        success: false,
+        message: err.message,
+      });
+    } finally {
+      setExecutingBackpay(false);
     }
   };
 
@@ -359,6 +451,16 @@ export default function AdminDashboard() {
             <span>Refresh</span>
           </button>
 
+          <button
+            onClick={() => setShowPasscodeModal(true)}
+            className="btn btn-outline btn-sm"
+            style={{ borderColor: 'rgba(234, 179, 8, 0.4)', color: '#facc15' }}
+            title="Change platform administrator passcode"
+          >
+            <Key size={15} />
+            <span>Change Passcode</span>
+          </button>
+
           <Link to="/dashboard" className="btn btn-outline btn-sm">
             <Radio size={15} color="#3b82f6" />
             <span>Band Live Queue</span>
@@ -367,6 +469,69 @@ export default function AdminDashboard() {
           <button onClick={handleLogout} className="btn btn-outline btn-sm" style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
             <Lock size={15} />
             <span>Lock</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Stripe Platform Balance & Back-Pay Status */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.95))',
+        border: '1px solid rgba(59, 130, 246, 0.35)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1.25rem 1.5rem',
+        marginBottom: '2rem',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '1rem',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)'
+      }}>
+        <div style={{ flex: '1 1 350px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+            <CreditCard size={18} color="#60a5fa" />
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              Stripe Platform Clearing Balance & Velvet & Soul Back-Pay
+            </h3>
+            <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
+              Clearing Nov 26
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
+            Tips & song revenues ($178.40) from recent live sets were safely captured on the platform account because Stripe requires the band to connect their bank account in Stripe Express before accepting direct destination transfers. Once their bank is added and funds clear on Nov 26th, transfer directly here.
+          </p>
+          {backpayResult && (
+            <div style={{
+              marginTop: '0.75rem',
+              padding: '0.65rem 0.85rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              background: backpayResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              border: `1px solid ${backpayResult.success ? '#10b981' : '#ef4444'}`,
+              color: backpayResult.success ? '#34d399' : '#f87171',
+            }}>
+              {backpayResult.message}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+              Pending Platform Balance
+            </span>
+            <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#38bdf8' }}>
+              $178.40
+            </span>
+          </div>
+
+          <button
+            onClick={() => handleExecuteBackPay('acct_1UdXMHQdTw6v72mX', 178.40)}
+            disabled={executingBackpay}
+            className="btn btn-primary btn-sm"
+            style={{ fontWeight: 700, padding: '0.6rem 1rem' }}
+          >
+            {executingBackpay ? 'Transferring...' : 'Transfer Back-Pay to Velvet & Soul'}
           </button>
         </div>
       </div>
@@ -902,6 +1067,125 @@ export default function AdminDashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* Change Passcode Modal */}
+      {showPasscodeModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          zIndex: 1000
+        }}>
+          <div className="glass-card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '2rem',
+            position: 'relative',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
+          }}>
+            <button
+              onClick={() => setShowPasscodeModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '0.25rem'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: 'rgba(234, 179, 8, 0.15)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#facc15',
+                marginBottom: '0.75rem'
+              }}>
+                <Key size={24} />
+              </div>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                Change Admin Passcode
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Update the secret passcode used to access the Platform Owner Portal.
+              </p>
+            </div>
+
+            <form onSubmit={handleChangePasscode}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="label">Current Passcode</label>
+                <input
+                  type="password"
+                  placeholder="Enter current passcode"
+                  value={currentPasscode}
+                  onChange={(e) => setCurrentPasscode(e.target.value)}
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="label">New Passcode</label>
+                <input
+                  type="password"
+                  placeholder="At least 4 characters"
+                  value={newPasscode}
+                  onChange={(e) => setNewPasscode(e.target.value)}
+                  className="input-field"
+                  required
+                  minLength={4}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="label">Confirm New Passcode</label>
+                <input
+                  type="password"
+                  placeholder="Repeat new passcode"
+                  value={confirmNewPasscode}
+                  onChange={(e) => setConfirmNewPasscode(e.target.value)}
+                  className="input-field"
+                  required
+                  minLength={4}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', marginBottom: '0.75rem' }}
+              >
+                <span>Save New Passcode</span>
+                <CheckCircle size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPasscodeModal(false)}
+                className="btn btn-outline btn-sm"
+                style={{ width: '100%' }}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

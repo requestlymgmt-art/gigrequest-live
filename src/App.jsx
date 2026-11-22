@@ -15,6 +15,7 @@ import BandAnalytics from './pages/BandAnalytics';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 
 export default function App() {
   const location = useLocation();
@@ -60,6 +61,7 @@ export default function App() {
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Fallback */}
           <Route path="*" element={<Landing />} />

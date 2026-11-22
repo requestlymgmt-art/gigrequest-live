@@ -297,9 +297,9 @@ export default function Landing() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                      Fan Covered Fee
+                      Fan-Covered Fee ($2 flat)
                     </span>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', fontWeight: 600 }}>$1.03</span>
+                    <span style={{ fontSize: '1.05rem', color: '#60a5fa', fontWeight: 700 }}>$2.00</span>
                   </div>
                 </div>
               </div>
@@ -384,7 +384,7 @@ export default function Landing() {
               Ready for Your Next Gig?
             </h2>
             <p style={{ color: 'var(--text-muted)', maxWidth: '550px', marginInline: 'auto', marginBottom: '2rem', fontSize: '1.1rem' }}>
-              Create your Requestly musician account today, connect your Stripe, and start earning up to 3x more tips from every crowd.
+              Create your Requestly musician account today, connect your Stripe, and start earning more tips from every crowd.
             </p>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link to="/register" className="btn btn-primary btn-lg">
