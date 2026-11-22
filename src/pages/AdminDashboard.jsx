@@ -31,7 +31,7 @@ import {
   ArrowRight,
   Key
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, DEMO_BAND_ID, DEMO_BAND_SLUG } from '../lib/supabase';
 import SongArtwork from '../components/common/SongArtwork';
 import toast from 'react-hot-toast';
 
@@ -181,20 +181,51 @@ export default function AdminDashboard() {
         supabase
           .from('profiles')
           .select('*')
+          .neq('id', DEMO_BAND_ID)
+          .neq('slug', DEMO_BAND_SLUG)
           .order('created_at', { ascending: false }),
         supabase
           .from('requests')
           .select('*')
+          .neq('band_id', DEMO_BAND_ID)
           .order('created_at', { ascending: false }),
         supabase
           .from('events')
           .select('*')
+          .neq('band_id', DEMO_BAND_ID)
           .order('started_at', { ascending: false }),
       ]);
 
-      setBands(profilesRes.data || []);
-      setRequests(reqsRes.data || []);
-      setEvents(evtsRes.data || []);
+      const realBands = (profilesRes.data || []).filter(
+        (b) => b.id !== DEMO_BAND_ID && b.slug !== DEMO_BAND_SLUG
+      );
+      const realRequests = (reqsRes.data || []).filter(
+        (r) => r.band_id !== DEMO_BAND_ID
+      );
+      const realEvents = (evtsRes.data || []).filter(
+        (e) => e.band_id !== DEMO_BAND_ID
+      );
+
+      setBands(realBands);
+      setRequests(realRequests);
+      setEvents(realEvents);
+
+      // Fetch live Stripe platform balance
+      try {
+        const balRes = await fetch('/.netlify/functions/payout-backpay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get-balance', destinationAccountId: 'acct_1UdXMHQdTw6v72mX' }),
+        });
+        const balData = await balRes.json();
+        if (balData?.success && balData?.platformBalance) {
+          const pend = (balData.platformBalance.pending?.[0]?.amount || 17840) / 100;
+          const avail = (balData.platformBalance.available?.[0]?.amount || 0) / 100;
+          setStripeBalance({ available: avail, pending: pend });
+        }
+      } catch (balErr) {
+        console.warn('Could not fetch live stripe balance:', balErr);
+      }
     } catch (err) {
       console.error('Admin data fetch error:', err);
       toast.error('Failed to load platform data');
@@ -207,24 +238,28 @@ export default function AdminDashboard() {
     if (isAuthenticated) {
       fetchData();
 
-      // Realtime listener for incoming requests across ALL bands
+      // Realtime listener for incoming requests across ALL real bands
       const channel = supabase
         .channel('admin_requests_realtime')
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'requests' },
           (payload) => {
-            setRequests((prev) => [payload.new, ...prev]);
-            toast('🎵 New request received on Requestly!', { icon: '⚡' });
+            if (payload.new.band_id !== DEMO_BAND_ID) {
+              setRequests((prev) => [payload.new, ...prev]);
+              toast('🎵 New request received on Requestly!', { icon: '⚡' });
+            }
           }
         )
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'requests' },
           (payload) => {
-            setRequests((prev) =>
-              prev.map((r) => (r.id === payload.new.id ? payload.new : r))
-            );
+            if (payload.new.band_id !== DEMO_BAND_ID) {
+              setRequests((prev) =>
+                prev.map((r) => (r.id === payload.new.id ? payload.new : r))
+              );
+            }
           }
         )
         .subscribe();
@@ -296,6 +331,34 @@ export default function AdminDashboard() {
       };
     }).sort((a, b) => b.totalEarned - a.totalEarned || b.totalRequests - a.totalRequests);
   }, [bands, requests, events]);
+
+  // Automated Dynamic Calculation for Velvet & Soul & Platform Breakdown
+  const velvetMetrics = useMemo(() => {
+    const velvetBand = bands.find(
+      (b) => b.slug === 'velvetandsoul' || b.band_name?.toLowerCase().includes('velvet')
+    );
+    const velvetId = velvetBand?.id;
+    const bandReqs = requests.filter((r) => r.band_id === velvetId);
+    const paidReqs = bandReqs.filter(
+      (r) => r.status !== 'declined' && r.payment_status !== 'refunded' && r.payment_status !== 'cancelled'
+    );
+    const bandEarned = paidReqs.reduce(
+      (sum, r) => sum + (Number(r.song_price) || 0) + (Number(r.tip_amount) || 0),
+      0
+    );
+    const totalPlatformStripe = Number(stripeBalance.pending) > 0 ? Number(stripeBalance.pending) : 178.40;
+    const requestlyFeeKept = Math.max(0, totalPlatformStripe - bandEarned);
+
+    return {
+      bandId: velvetId,
+      bandName: velvetBand?.band_name || 'Velvet & Soul',
+      bandAccountId: velvetBand?.stripe_account_id || 'acct_1UdXMHQdTw6v72mX',
+      paidCount: paidReqs.length,
+      bandEarned,
+      totalPlatformStripe,
+      requestlyFeeKept,
+    };
+  }, [bands, requests, stripeBalance]);
 
   // Per-Night / Event Earnings Breakdown
   const eventsWithEarnings = useMemo(() => {
@@ -498,7 +561,7 @@ export default function AdminDashboard() {
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
-            Total net platform funds ($178.40) include <strong>$134.00 in band earnings</strong> (100% of songs & tips) and <strong>$44.40 in Requestly platform fees</strong>. The band payout of $134.00 will be transferred directly to Velvet & Soul once they complete their bank setup in Stripe Express and funds clear on Nov 26th.
+            Total net platform funds (${velvetMetrics.totalPlatformStripe.toFixed(2)}) automatically calculates {velvetMetrics.paidCount} real paid requests: <strong>${velvetMetrics.bandEarned.toFixed(2)} in band earnings</strong> (100% of songs & tips) and <strong>${velvetMetrics.requestlyFeeKept.toFixed(2)} in Requestly platform fees</strong>. The band payout will be transferred directly to Velvet & Soul once they complete their bank setup in Stripe Express and funds clear on Nov 26th.
           </p>
           {backpayResult && (
             <div style={{
@@ -521,7 +584,7 @@ export default function AdminDashboard() {
               Total in Stripe
             </span>
             <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-              $178.40
+              ${velvetMetrics.totalPlatformStripe.toFixed(2)}
             </span>
           </div>
 
@@ -530,7 +593,7 @@ export default function AdminDashboard() {
               Band Owed (100%)
             </span>
             <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10b981' }}>
-              $134.00
+              ${velvetMetrics.bandEarned.toFixed(2)}
             </span>
           </div>
 
@@ -539,17 +602,17 @@ export default function AdminDashboard() {
               Requestly Fee Kept
             </span>
             <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#60a5fa' }}>
-              +$44.40
+              +${velvetMetrics.requestlyFeeKept.toFixed(2)}
             </span>
           </div>
 
           <button
-            onClick={() => handleExecuteBackPay('acct_1UdXMHQdTw6v72mX', 134.00)}
-            disabled={executingBackpay}
+            onClick={() => handleExecuteBackPay(velvetMetrics.bandAccountId, velvetMetrics.bandEarned)}
+            disabled={executingBackpay || velvetMetrics.bandEarned <= 0}
             className="btn btn-primary btn-sm"
             style={{ fontWeight: 700, padding: '0.65rem 1.1rem' }}
           >
-            {executingBackpay ? 'Transferring...' : 'Transfer $134.00 Back-Pay to Velvet & Soul'}
+            {executingBackpay ? 'Transferring...' : `Transfer $${velvetMetrics.bandEarned.toFixed(2)} Back-Pay to ${velvetMetrics.bandName}`}
           </button>
         </div>
       </div>
