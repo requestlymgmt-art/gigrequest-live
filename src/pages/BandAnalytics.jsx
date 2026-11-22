@@ -30,6 +30,7 @@ export default function BandAnalytics() {
   const [requests, setRequests] = useState([]);
   const [events, setEvents] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
+  const [eventFilter, setEventFilter] = useState('earning'); // 'earning' or 'all'
 
   // Fetch all band requests & events
   useEffect(() => {
@@ -214,9 +215,9 @@ export default function BandAnalytics() {
       .slice(0, 5);
   }, [filteredRequests]);
 
-  // Gigs & Event History with revenue
+  // Gigs & Event History with revenue - prioritized by earnings first
   const eventBreakdown = useMemo(() => {
-    return events.map((ev) => {
+    const list = events.map((ev, originalIndex) => {
       const evReqs = paidRequests.filter((r) => {
         if (r.event_id && r.event_id === ev.id) return true;
         if (!r.event_id && ev.started_at && ev.ended_at) {
@@ -238,9 +239,36 @@ export default function BandAnalytics() {
         date: ev.started_at,
         requestCount: evReqs.length,
         totalEarned,
+        originalNumber: events.length - originalIndex,
       };
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+
+    // Priority Sort: Events that actually made money ALWAYS appear first!
+    list.sort((a, b) => {
+      if ((b.totalEarned > 0) !== (a.totalEarned > 0)) {
+        return b.totalEarned > 0 ? 1 : -1;
+      }
+      if (b.totalEarned > 0 && a.totalEarned > 0) {
+        return b.totalEarned - a.totalEarned || new Date(b.date) - new Date(a.date);
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    return list;
   }, [events, paidRequests]);
+
+  // Filtered view: toggle between Earning Shows only (hides $0 tests) and All Sets
+  const displayedEvents = useMemo(() => {
+    if (eventFilter === 'earning') {
+      const earningOnly = eventBreakdown.filter((ev) => ev.totalEarned > 0);
+      return earningOnly.length > 0 ? earningOnly : eventBreakdown;
+    }
+    return eventBreakdown;
+  }, [eventBreakdown, eventFilter]);
+
+  const earningEventsCount = useMemo(() => {
+    return eventBreakdown.filter((ev) => ev.totalEarned > 0).length;
+  }, [eventBreakdown]);
 
   const formatMonthLabel = (key) => {
     if (key === 'all') return 'All Time';
@@ -668,80 +696,133 @@ export default function BandAnalytics() {
 
           {/* Events & Gig Earnings Breakdown */}
           <div className="glass-card" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Calendar size={20} color="#10b981" />
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>
                   Gig & Event Performance
                 </h3>
               </div>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                {eventBreakdown.length} {eventBreakdown.length === 1 ? 'live set' : 'live sets'} recorded
-              </span>
+
+              {/* Priority Filter: Earning Shows vs All Sets */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255, 255, 255, 0.05)', padding: '0.25rem', borderRadius: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEventFilter('earning')}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: eventFilter === 'earning' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                    color: eventFilter === 'earning' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  💵 Earning Shows ({earningEventsCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEventFilter('all')}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: eventFilter === 'all' ? '#3b82f6' : 'transparent',
+                    color: eventFilter === 'all' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  All Sets ({eventBreakdown.length})
+                </button>
+              </div>
             </div>
 
-            {eventBreakdown.length === 0 ? (
+            {displayedEvents.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
                 <Radio size={32} style={{ marginBottom: '0.65rem', opacity: 0.5 }} />
                 <p>No gigs recorded yet. Start a live set from the dashboard to track show-by-show earnings!</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                {eventBreakdown.map((ev, idx) => (
-                  <div
-                    key={ev.id}
-                    style={{
-                      padding: '1.15rem',
-                      background: 'rgba(255, 255, 255, 0.025)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: '0.85rem'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          color: '#60a5fa',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em'
-                        }}>
-                          Live Set #{eventBreakdown.length - idx}
+                {displayedEvents.map((ev) => {
+                  const isEarning = ev.totalEarned > 0;
+                  return (
+                    <div
+                      key={ev.id}
+                      style={{
+                        padding: '1.15rem',
+                        background: isEarning
+                          ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.09), rgba(255, 255, 255, 0.025))'
+                          : 'rgba(255, 255, 255, 0.015)',
+                        border: isEarning ? '1px solid rgba(16, 185, 129, 0.4)' : '1px dashed rgba(255, 255, 255, 0.1)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '0.85rem',
+                        boxShadow: isEarning ? '0 4px 16px rgba(16, 185, 129, 0.12)' : 'none',
+                        opacity: !isEarning ? 0.6 : 1,
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <span style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              color: isEarning ? '#34d399' : '#60a5fa',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em'
+                            }}>
+                              Live Set #{ev.originalNumber || ''}
+                            </span>
+                            {isEarning ? (
+                              <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
+                                ✓ EARNED
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', padding: '0.15rem 0.35rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                                $0 TEST
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                            {ev.date ? new Date(ev.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>
+                          {ev.title}
+                        </h4>
+                        {ev.venue && (
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            📍 {ev.venue}
+                          </p>
+                        )}
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        paddingTop: '0.65rem'
+                      }}>
+                        <span style={{ fontSize: '0.82rem', color: isEarning ? '#cbd5e1' : 'var(--text-muted)', fontWeight: isEarning ? 600 : 400 }}>
+                          {ev.requestCount} {ev.requestCount === 1 ? 'request' : 'requests'}
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                          {ev.date ? new Date(ev.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: isEarning ? '#10b981' : 'var(--text-dim)' }}>
+                          ${ev.totalEarned.toFixed(2)}
                         </span>
                       </div>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>
-                        {ev.title}
-                      </h4>
-                      {ev.venue && (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                          📍 {ev.venue}
-                        </p>
-                      )}
                     </div>
-
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                      paddingTop: '0.65rem'
-                    }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                        {ev.requestCount} requests
-                      </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981' }}>
-                        ${ev.totalEarned.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

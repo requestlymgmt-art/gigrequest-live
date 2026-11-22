@@ -414,7 +414,15 @@ export default function AdminDashboard() {
         paidCount: paidReqs.length,
         totalEarned,
       };
-    }).sort((a, b) => new Date(b.started_at || b.created_at) - new Date(a.started_at || a.created_at));
+    }).sort((a, b) => {
+      if ((b.totalEarned > 0) !== (a.totalEarned > 0)) {
+        return b.totalEarned > 0 ? 1 : -1;
+      }
+      if (b.totalEarned > 0 && a.totalEarned > 0) {
+        return b.totalEarned - a.totalEarned || new Date(b.started_at || b.created_at) - new Date(a.started_at || a.created_at);
+      }
+      return new Date(b.started_at || b.created_at) - new Date(a.started_at || a.created_at);
+    });
   }, [events, requests, bandMap]);
 
   // Filtered Requests Feed
